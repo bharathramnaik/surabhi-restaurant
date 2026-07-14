@@ -101,8 +101,17 @@ export default function OrdersPage() {
 
   const handleSave = () => {
     if (form.items.length === 0) { toast.error("Add at least one item"); return; }
-    if (editingId) updateOrder(editingId, { ...form, subtotal, tax, total });
-    else addOrder({ ...form, status: "pending", subtotal, tax, total });
+    if (editingId) {
+      const prev = orders.find((o) => o.id === editingId);
+      updateOrder(editingId, { ...form, subtotal, tax, total });
+      if (form.tableId && form.tableId !== prev?.tableId) {
+        updateTable(form.tableId, { status: "occupied" });
+        if (prev?.tableId) updateTable(prev.tableId, { status: "available" });
+      }
+    } else {
+      addOrder({ ...form, status: "pending", subtotal, tax, total });
+      if (form.tableId) updateTable(form.tableId, { status: "occupied" });
+    }
     toast.success(t("msg.saved")); setDialogOpen(false);
   };
 
