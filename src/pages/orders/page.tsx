@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ConfirmDialog from "@/components/ui/confirm-dialog.tsx";
 import { useData } from "@/lib/data-context.tsx";
 import { cn } from "@/lib/utils.ts";
 import { Plus, Pencil, Trash2, Search, ShoppingCart, Receipt, X, Printer, Share2 } from "lucide-react";
@@ -55,6 +56,7 @@ export default function OrdersPage() {
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState("");
   const [selectedQty, setSelectedQty] = useState(1);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const sortedOrders = useMemo(() => [...orders].filter((o) => {
     const matchSearch = o.customerName.toLowerCase().includes(search.toLowerCase()) || String(o.orderNumber).includes(search);
@@ -154,7 +156,7 @@ export default function OrdersPage() {
                     <>
                       <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handlePrintOrder(order)}><Printer className="w-3 h-3 mr-1" /> {t("btn.print")}</Button>
                       <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleWhatsAppOrder(order)}><Share2 className="w-3 h-3 mr-1" /> {t("btn.whatsapp")}</Button>
-                      <Button size="sm" variant="destructive" className="cursor-pointer text-xs h-6" onClick={() => { if (confirm(t("msg.delete_billed_order"))) deleteOrder(order.id); }}><Trash2 className="w-3 h-3 mr-1" /> {t("btn.delete")}</Button>
+                      <Button size="sm" variant="destructive" className="cursor-pointer text-xs h-6" onClick={() => setDeleteConfirmId(order.id)}><Trash2 className="w-3 h-3 mr-1" /> {t("btn.delete")}</Button>
                     </>
                   )}
                 </div>
@@ -207,6 +209,12 @@ export default function OrdersPage() {
           </div>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!deleteConfirmId}
+        onOpenChange={(o) => { if (!o) setDeleteConfirmId(null); }}
+        onConfirm={() => { if (deleteConfirmId) deleteOrder(deleteConfirmId); setDeleteConfirmId(null); }}
+        title={t("msg.delete_billed_order")}
+      />
     </div>
   );
 }

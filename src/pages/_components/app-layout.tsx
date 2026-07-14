@@ -103,7 +103,7 @@ export default function AppLayout() {
         </div>
       )}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-white/80 backdrop-blur-sm flex-shrink-0">
+        <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-sky-50/80 backdrop-blur-sm flex-shrink-0">
           <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-accent cursor-pointer">
             <Menu className="w-5 h-5" />
           </button>

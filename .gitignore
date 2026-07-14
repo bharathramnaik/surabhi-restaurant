@@ -31,3 +31,6 @@ tsconfig.tsbuildinfo
 
 # Convex generated
 convex/_generated/
+
+# Capacitor asset source images (generated from public/icon/)
+/assets
