@@ -9,6 +9,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Outlet, useLocation, useParams } from "react-router-dom";
 
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || "3.0";
+
 const navItems = [
   { key: "nav.dashboard", path: "", icon: LayoutDashboard },
   { key: "nav.menu", path: "menu", icon: BookOpen },
@@ -79,7 +81,7 @@ export default function AppLayout() {
       </nav>
       <div className="p-3 border-t border-sidebar-border">
         <div className="flex items-center justify-between text-xs text-sidebar-foreground/40">
-          <span>v2.0 © 2025 Surabhi</span>
+          <span>v{APP_VERSION} © 2025–{new Date().getFullYear()} Surabhi</span>
           {isOnline ? <Wifi className="w-3 h-3 text-green-400" /> : <WifiOff className="w-3 h-3 text-red-400" />}
         </div>
       </div>
@@ -103,7 +105,7 @@ export default function AppLayout() {
         </div>
       )}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-sky-50/80 backdrop-blur-sm flex-shrink-0">
+        <header className="h-14 border-b border-sky-200/50 dark:border-sky-400/30 flex items-center justify-between px-4 bg-sky-200/80 dark:bg-sky-400/20 backdrop-blur-sm flex-shrink-0">
           <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-accent cursor-pointer">
             <Menu className="w-5 h-5" />
           </button>
