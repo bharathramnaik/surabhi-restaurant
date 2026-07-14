@@ -47,13 +47,14 @@ function formatInvoice(order: { orderNumber: number; customerName: string; custo
 
 export default function OrdersPage() {
   const { t } = useTranslation("common");
-  const { orders, tables, menuItems, settings, addOrder, updateOrder, deleteOrder, updateTable } = useData();
+  const { orders, tables, menuItems, menuCategories, settings, addOrder, updateOrder, deleteOrder, updateTable } = useData();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ tableId: null as string | null, tableNumber: null as number | null, customerName: "", customerPhone: "", items: [] as OrderFormItem[], notes: "" });
   const [addItemOpen, setAddItemOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedMenuItem, setSelectedMenuItem] = useState("");
   const [selectedQty, setSelectedQty] = useState(1);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -73,7 +74,7 @@ export default function OrdersPage() {
     const existing = form.items.find((i) => i.menuItemId === selectedMenuItem);
     if (existing) setForm({ ...form, items: form.items.map((i) => i.menuItemId === selectedMenuItem ? { ...i, quantity: i.quantity + selectedQty } : i) });
     else setForm({ ...form, items: [...form.items, { menuItemId: mi.id, name: mi.name, price: mi.price, quantity: selectedQty }] });
-    setSelectedMenuItem(""); setSelectedQty(1); setAddItemOpen(false);
+    setSelectedMenuItem(""); setSelectedQty(1); setSelectedCategory(null); setAddItemOpen(false);
   };
 
   const subtotal = form.items.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -199,14 +200,49 @@ export default function OrdersPage() {
           </div>
         </DialogContent>
       </Dialog>
-      <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{t("btn.add_item")}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1"><Label>{t("label.menu_item")}</Label><Select value={selectedMenuItem} onValueChange={setSelectedMenuItem}><SelectTrigger><SelectValue placeholder={t("btn.search")} /></SelectTrigger><SelectContent>{menuItems.filter((m) => m.available).map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — ₹{m.price}</SelectItem>)}</SelectContent></Select></div>
-            <div className="space-y-1"><Label>{t("label.quantity")}</Label><Input type="number" min={1} value={selectedQty} onChange={(e) => setSelectedQty(Number(e.target.value))} /></div>
-            <div className="flex gap-2 justify-end"><Button variant="secondary" onClick={() => setAddItemOpen(false)} className="cursor-pointer">{t("btn.cancel")}</Button><Button onClick={handleAddItem} disabled={!selectedMenuItem} className="cursor-pointer">{t("btn.add")}</Button></div>
-          </div>
+      <Dialog open={addItemOpen} onOpenChange={(o) => { if (!o) { setSelectedCategory(null); setAddItemOpen(false); } }}>
+        <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{selectedCategory ? menuCategories.find((c) => c.id === selectedCategory)?.name || t("btn.add_item") : t("btn.add_item")}</DialogTitle></DialogHeader>
+          {selectedCategory === null ? (
+            <div className="grid grid-cols-2 gap-2">
+              {menuCategories.sort((a, b) => a.sortOrder - b.sortOrder).map((cat) => {
+                const count = menuItems.filter((m) => m.available && m.categoryId === cat.id).length;
+                if (count === 0) return null;
+                return (
+                  <button key={cat.id} onClick={() => setSelectedCategory(cat.id)}
+                    className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 hover:border-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-colors cursor-pointer">
+                    <span className="font-medium text-sm text-center">{cat.name}</span>
+                    <span className="text-xs text-gray-400 mt-1">{count} items</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {menuItems.filter((m) => m.available && m.categoryId === selectedCategory).map((m) => (
+                <div key={m.id} onClick={() => { setSelectedMenuItem(m.id); setSelectedQty(1); }}
+                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${selectedMenuItem === m.id ? "border-sky-500 bg-sky-50 dark:bg-sky-900/20" : "border-gray-200 hover:border-gray-300"}`}>
+                  <div>
+                    <div className="font-medium text-sm">{m.name}</div>
+                    <div className="text-xs text-gray-500">₹{m.price}</div>
+                  </div>
+                  {selectedMenuItem === m.id && (
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedQty(Math.max(1, selectedQty - 1)); }}
+                        className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-sm cursor-pointer">−</button>
+                      <span className="w-6 text-center text-sm font-medium">{selectedQty}</span>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedQty(selectedQty + 1); }}
+                        className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-sm cursor-pointer">+</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="flex gap-2 justify-between pt-2">
+                <Button variant="secondary" onClick={() => { setSelectedCategory(null); setSelectedMenuItem(""); }} className="cursor-pointer">{t("btn.back")}</Button>
+                <Button onClick={handleAddItem} disabled={!selectedMenuItem} className="cursor-pointer">{t("btn.add")}</Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       <ConfirmDialog
