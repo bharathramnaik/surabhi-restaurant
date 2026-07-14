@@ -1,0 +1,17 @@
+{
+  "title": "Dashboard",
+  "welcome": "Welcome to Surabhi Hotel",
+  "today_orders": "Today's Orders",
+  "today_revenue": "Today's Revenue",
+  "active_tables": "Active Tables",
+  "total_employees": "Total Employees",
+  "recent_orders": "Recent Orders",
+  "table_status": "Table Status",
+  "quick_actions": "Quick Actions",
+  "new_booking": "New Booking",
+  "new_order": "New Order",
+  "view_menu": "View Menu",
+  "menu_items": "Menu Items",
+  "total_items": "Total Items",
+  "categories": "Categories"
+}
