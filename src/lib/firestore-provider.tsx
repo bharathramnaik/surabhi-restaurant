@@ -8,6 +8,7 @@ import type {
   DataContextType, MenuCategory, MenuItem, RestaurantTable,
   Booking, Order, Employee, SalaryRecord, InventoryItem,
 } from "./data-context.tsx";
+import { toast } from "sonner";
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -114,20 +115,27 @@ function useCol<T extends { id: string }>(name: string, seed: T[]): T[] {
   const seeded = useRef(false);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, name), (snap) => {
-      if (snap.empty && !seeded.current) {
-        seeded.current = true;
-        const batch = writeBatch(db);
-        seed.forEach((item) => {
-          const ref = doc(db, name, item.id);
-          batch.set(ref, item as Record<string, unknown>);
-        });
-        batch.commit().catch(() => {});
-        return;
-      }
-      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as T[];
-      setData(items);
-    });
+    const unsub = onSnapshot(
+      collection(db, name),
+      (snap) => {
+        if (snap.empty && !seeded.current) {
+          seeded.current = true;
+          const batch = writeBatch(db);
+          seed.forEach((item) => {
+            const ref = doc(db, name, item.id);
+            batch.set(ref, item as Record<string, unknown>);
+          });
+          batch.commit().catch((e) => console.error(`Seed ${name} failed:`, e));
+          return;
+        }
+        const items = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as T[];
+        setData(items);
+      },
+      (error) => {
+        console.error(`Firestore snapshot error (${name}):`, error);
+        toast.error(`Firestore sync error: ${error.message}`);
+      },
+    );
     return unsub;
   }, [name]);
 
@@ -146,21 +154,34 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Record<string, string>>(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "settings", "config"), (snap) => {
-      if (snap.exists()) setSettings(snap.data() as Record<string, string>);
-      else { setDoc(doc(db, "settings", "config"), DEFAULT_SETTINGS).catch(() => {}); }
-    });
+    const unsub = onSnapshot(
+      doc(db, "settings", "config"),
+      (snap) => {
+        if (snap.exists()) setSettings(snap.data() as Record<string, string>);
+        else { setDoc(doc(db, "settings", "config"), DEFAULT_SETTINGS).catch((e) => console.error("Seed settings failed:", e)); }
+      },
+      (error) => {
+        console.error("Firestore settings snapshot error:", error);
+        toast.error(`Firestore settings error: ${error.message}`);
+      },
+    );
     return unsub;
   }, []);
 
   const orderCounter = Math.max(0, ...orders.map((o) => o.orderNumber)) + 1;
 
   const write = useCallback(async (col: string, id: string, data: Record<string, unknown>) => {
-    try { await setDoc(doc(db, col, id), data, { merge: true }); } catch { /* ignore */ }
+    try { await setDoc(doc(db, col, id), data, { merge: true }); } catch (e) {
+      console.error(`Firestore write error (${col}/${id}):`, e);
+      toast.error(`Failed to save: ${(e as Error).message}`);
+    }
   }, []);
 
   const remove = useCallback(async (col: string, id: string) => {
-    try { await deleteDoc(doc(db, col, id)); } catch { /* ignore */ }
+    try { await deleteDoc(doc(db, col, id)); } catch (e) {
+      console.error(`Firestore delete error (${col}/${id}):`, e);
+      toast.error(`Failed to delete: ${(e as Error).message}`);
+    }
   }, []);
 
   const ctx: DataContextType = {

@@ -18,6 +18,8 @@ if (HAS_FIREBASE) {
   } catch (e) {
     console.warn("Firestore init failed, using localStorage.", e);
   }
+} else {
+  console.warn("No Firebase config found (VITE_FIREBASE_PROJECT_ID missing). Data is localStorage only.");
 }
 
 export function DefaultProviders({ children }: { children: ReactNode }) {
