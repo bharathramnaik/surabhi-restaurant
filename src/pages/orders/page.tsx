@@ -67,7 +67,7 @@ function handleWhatsApp(order: { orderNumber: number; customerName: string; cust
 
 export default function OrdersPage() {
   const { t } = useTranslation("common");
-  const { orders, tables, menuItems, settings, addOrder, updateOrder, updateTable } = useData();
+  const { orders, tables, menuItems, settings, addOrder, updateOrder, deleteOrder, updateTable } = useData();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -150,10 +150,11 @@ export default function OrdersPage() {
                   {order.status === "pending" && <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleStatusChange(order.id, "in_progress")}>Start</Button>}
                   {order.status === "in_progress" && <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleStatusChange(order.id, "served")}>Serve</Button>}
                   {order.status === "served" && <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleStatusChange(order.id, "billed")}><Receipt className="w-3 h-3 mr-1" /> Bill</Button>}
-                  {order.status === "billed" && (
+                   {order.status === "billed" && (
                     <>
                       <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handlePrint(order, settings)}><Printer className="w-3 h-3 mr-1" /> Print</Button>
                       <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleWhatsApp(order, settings, order.customerPhone)}><Share2 className="w-3 h-3 mr-1" /> WhatsApp</Button>
+                      <Button size="sm" variant="destructive" className="cursor-pointer text-xs h-6" onClick={() => { if (confirm("Delete this billed order?")) deleteOrder(order.id); }}><Trash2 className="w-3 h-3 mr-1" /> Delete</Button>
                     </>
                   )}
                 </div>
