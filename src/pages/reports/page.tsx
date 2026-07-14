@@ -1,0 +1,121 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { api } from "@/convex/_generated/api.js";
+import { useQuery, useMutation } from "convex/react";
+import { BarChart3, Download, Settings } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+
+export default function ReportsPage() {
+  const { t } = useTranslation("common");
+  const orders = useQuery(api.orders.getAll) ?? [];
+  const tables = useQuery(api.restaurantTables.getAll) ?? [];
+  const employees = useQuery(api.employees.getAll) ?? [];
+  const menuItems = useQuery(api.menuItems.getAll) ?? [];
+  const inventory = useQuery(api.inventory.getAll) ?? [];
+  const settings = useQuery(api.settings.getMultiple, { keys: ["gstin", "restaurantPhone", "restaurantAddress", "adminPin"] }) ?? {};
+  const setSetting = useMutation(api.settings.set);
+  const [gstinInput, setGstinInput] = useState("");
+  const [addressInput, setAddressInput] = useState("");
+  const [phoneInput, setPhoneInput] = useState("");
+  const [pinInput, setPinInput] = useState("");
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  if (!settingsLoaded && Object.keys(settings).length > 0) {
+    setGstinInput(settings.gstin ?? "29AABCS1429B1ZB");
+    setAddressInput(settings.restaurantAddress ?? "");
+    setPhoneInput(settings.restaurantPhone ?? "");
+    setPinInput("");
+    setSettingsLoaded(true);
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const todayOrders = orders.filter((o) => new Date(o._creationTime).toISOString().startsWith(today) && o.status === "billed");
+  const monthOrders = orders.filter((o) => new Date(o._creationTime).toISOString().startsWith(thisMonth) && o.status === "billed");
+  const totalOrders = orders.filter((o) => o.status === "billed");
+  const todayRevenue = todayOrders.reduce((s, o) => s + o.total, 0);
+  const monthRevenue = monthOrders.reduce((s, o) => s + o.total, 0);
+  const totalRevenue = totalOrders.reduce((s, o) => s + o.total, 0);
+  const itemCounts: Record<string, { name: string; count: number; revenue: number }> = {};
+  for (const order of totalOrders) {
+    for (const item of order.items) {
+      if (!itemCounts[item.name]) itemCounts[item.name] = { name: item.name, count: 0, revenue: 0 };
+      itemCounts[item.name].count += item.quantity;
+      itemCounts[item.name].revenue += item.price * item.quantity;
+    }
+  }
+  const topItems = Object.values(itemCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify({ orders, tables, employees, menuItems, inventory, exportedAt: new Date().toISOString() }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `surabhi-data-${today}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url); toast.success(t("msg.export_success"));
+  };
+  const saveSettings = async () => {
+    const promises: Promise<void>[] = [];
+    if (gstinInput) promises.push(setSetting({ key: "gstin", value: gstinInput }));
+    if (addressInput) promises.push(setSetting({ key: "restaurantAddress", value: addressInput }));
+    if (phoneInput) promises.push(setSetting({ key: "restaurantPhone", value: phoneInput }));
+    if (pinInput && pinInput.length >= 4) promises.push(setSetting({ key: "adminPin", value: pinInput }));
+    await Promise.all(promises);
+    toast.success("Settings saved");
+  };
+  return (
+    <div className="p-4 md:p-6 pb-20 md:pb-6 space-y-6">
+      <h1 className="text-2xl font-bold">{t("nav.reports")}</h1>
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2"><BarChart3 className="w-4 h-4" /> Sales Summary</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { label: "Today's Revenue", value: `₹${todayRevenue.toLocaleString()}`, sub: `${todayOrders.length} orders billed` },
+            { label: "This Month", value: `₹${monthRevenue.toLocaleString()}`, sub: `${monthOrders.length} orders billed` },
+            { label: "All-Time Revenue", value: `₹${totalRevenue.toLocaleString()}`, sub: `${totalOrders.length} billed orders` },
+          ].map(({ label, value, sub }) => (
+            <Card key={label} className="shadow-sm"><CardContent className="pt-4 pb-4"><p className="text-sm text-muted-foreground">{label}</p><p className="text-2xl font-bold mt-1">{value}</p><p className="text-xs text-muted-foreground mt-1">{sub}</p></CardContent></Card>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[{ label: "Menu Items", value: menuItems.length }, { label: "Tables", value: tables.length }, { label: "Total Orders", value: orders.length }, { label: "Employees", value: employees.length }].map(({ label, value }) => (
+          <Card key={label} className="shadow-sm"><CardContent className="pt-4 pb-4 text-center"><p className="text-3xl font-bold text-primary">{value}</p><p className="text-sm text-muted-foreground mt-1">{label}</p></CardContent></Card>
+        ))}
+      </div>
+      {topItems.length > 0 && (
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3"><CardTitle className="text-base">Top Selling Items</CardTitle></CardHeader>
+          <CardContent className="pt-0 space-y-2">
+            {topItems.map((item, i) => (
+              <div key={item.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-3"><span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{i+1}</span><span className="text-sm">{item.name}</span></div>
+                <div className="text-right"><p className="text-sm font-medium">{item.count} sold</p><p className="text-xs text-muted-foreground">₹{item.revenue.toLocaleString()}</p></div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3"><CardTitle className="text-base">Export Data</CardTitle></CardHeader>
+        <CardContent className="pt-0 space-y-3">
+          <p className="text-sm text-muted-foreground">Download all restaurant data as a JSON file for backup.</p>
+          <Button onClick={exportJSON} className="cursor-pointer"><Download className="w-4 h-4 mr-2" /> {t("btn.export")}</Button>
+        </CardContent>
+      </Card>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Settings className="w-4 h-4" /> Restaurant Settings</CardTitle></CardHeader>
+        <CardContent className="pt-0 space-y-3">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>GSTIN Number</Label><Input value={gstinInput} onChange={(e) => setGstinInput(e.target.value)} placeholder="29AABCS1429B1ZB" /><p className="text-xs text-muted-foreground">Appears on all bills</p></div>
+            <div className="space-y-1"><Label>Restaurant Phone</Label><Input value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder="9876543210" /></div>
+            <div className="space-y-1 sm:col-span-2"><Label>Restaurant Address</Label><Input value={addressInput} onChange={(e) => setAddressInput(e.target.value)} placeholder="Main Road, Bangalore, Karnataka" /></div>
+            <div className="space-y-1"><Label>New Admin PIN (4+ digits)</Label><Input type="password" value={pinInput} onChange={(e) => setPinInput(e.target.value)} placeholder="Leave blank to keep current" maxLength={6} /><p className="text-xs text-muted-foreground">Used for salary access</p></div>
+          </div>
+          <Button onClick={() => { void saveSettings(); }} className="cursor-pointer">{t("btn.save")} Settings</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
