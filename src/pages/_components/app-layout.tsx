@@ -21,7 +21,7 @@ const navItems = [
 
 function WhaleLogo({ size = 40 }: { size?: number }) {
   return (
-    <img src="/icon/icon-192.svg" alt="Surabhi Hotel" width={size} height={size} className="rounded-xl object-cover" />
+    <img src="/icon/logo.jpg" alt="Surabhi Hotel" width={size} height={size} className="rounded-xl object-cover" style={{ transform: "scaleX(-1)" }} />
   );
 }
 
