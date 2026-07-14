@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { api } from "@/convex/_generated/api.js";
-import { useQuery } from "convex/react";
+import { useData } from "@/lib/data-context.tsx";
 import { BarChart3, ClipboardList, IndianRupee, Package, UtensilsCrossed, Users, Plus, BookOpen, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -12,30 +11,30 @@ export default function Dashboard() {
   const { t } = useTranslation(["dashboard", "common"]);
   const { lng } = useParams<{ lng: string }>();
   const navigate = useNavigate();
-  const orders = useQuery(api.orders.getAll) ?? [];
-  const tables = useQuery(api.restaurantTables.getAll) ?? [];
-  const employees = useQuery(api.employees.getAll) ?? [];
-  const inventory = useQuery(api.inventory.getAll) ?? [];
-  const isLoading = orders === undefined || tables === undefined;
+  const { orders, tables, employees, inventory, isLoading } = useData();
+
   const today = new Date().toISOString().slice(0, 10);
-  const todayOrders = orders.filter((o) => o._creationTime > new Date(today).getTime());
+  const todayOrders = orders.filter((o) => o.createdAt.startsWith(today));
   const todayRevenue = todayOrders.filter((o) => o.status === "billed").reduce((s, o) => s + o.total, 0);
   const occupiedTables = tables.filter((t) => t.status === "occupied" || t.status === "reserved").length;
   const activeEmployees = employees.filter((e) => e.active).length;
   const lowStockItems = inventory.filter((i) => i.quantity <= i.minStock);
-  const recentOrders = [...orders].sort((a, b) => b._creationTime - a._creationTime).slice(0, 5);
+  const recentOrders = [...orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+
   const statusColor: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-800",
     in_progress: "bg-blue-100 text-blue-800",
     served: "bg-green-100 text-green-800",
     billed: "bg-gray-100 text-gray-700",
   };
+
   if (isLoading) return (
     <div className="p-4 md:p-6 space-y-6 pb-20 md:pb-6">
       <Skeleton className="h-8 w-64" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{[1,2,3,4].map((i) => <Skeleton key={i} className="h-24" />)}</div>
     </div>
   );
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20 md:pb-6">
       <div>
@@ -83,7 +82,7 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-2">
                 {recentOrders.map((order) => (
-                  <div key={order._id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                  <div key={order.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                     <div>
                       <p className="text-sm font-medium">#{order.orderNumber} — {order.customerName || `Table ${order.tableNumber}`}</p>
                       <p className="text-xs text-muted-foreground">{order.items.length} items</p>
@@ -108,7 +107,7 @@ export default function Dashboard() {
           <CardContent className="pt-0">
             <div className="grid grid-cols-4 gap-2">
               {tables.map((table) => (
-                <div key={table._id} className={cn("aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-bold cursor-pointer border-2", table.status === "available" && "bg-green-50 border-green-200 text-green-700", table.status === "occupied" && "bg-red-50 border-red-200 text-red-700", table.status === "reserved" && "bg-yellow-50 border-yellow-200 text-yellow-700")} onClick={() => navigate(`/${lng}/tables`)}>
+                <div key={table.id} className={cn("aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-bold cursor-pointer border-2", table.status === "available" && "bg-green-50 border-green-200 text-green-700", table.status === "occupied" && "bg-red-50 border-red-200 text-red-700", table.status === "reserved" && "bg-yellow-50 border-yellow-200 text-yellow-700")} onClick={() => navigate(`/${lng}/tables`)}>
                   <span className="text-lg">{table.number}</span>
                   <span className="text-[9px] opacity-70">{table.capacity}p</span>
                 </div>

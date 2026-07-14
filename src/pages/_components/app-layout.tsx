@@ -1,7 +1,5 @@
 import LocaleSwitcher from "@/components/ui/locale-switcher.tsx";
 import { cn } from "@/lib/utils.ts";
-import { api } from "@/convex/_generated/api.js";
-import { useMutation, useQuery } from "convex/react";
 import { useEffect } from "react";
 import {
   BarChart3, BookOpen, ClipboardList, LayoutDashboard,
@@ -23,7 +21,7 @@ const navItems = [
 
 function WhaleLogo({ size = 40 }: { size?: number }) {
   return (
-    <img src="/icon/icon-192.png" alt="Surabhi Hotel" width={size} height={size} className="rounded-xl object-cover" />
+    <img src="/icon/icon-192.svg" alt="Surabhi Hotel" width={size} height={size} className="rounded-xl object-cover" />
   );
 }
 
@@ -35,13 +33,6 @@ export default function AppLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-  const isSeeded = useQuery(api.users.isSeeded);
-  const seed = useMutation(api.users.seed);
-
-  useEffect(() => {
-    if (isSeeded === false) { void seed(); }
-  }, [isSeeded, seed]);
 
   useEffect(() => {
     const on = () => setIsOnline(true);

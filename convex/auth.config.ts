@@ -1,10 +1,2 @@
-import { AuthConfig } from "convex/server";
-
-export default {
-  providers: [
-    {
-      domain: process.env.HERCULES_OIDC_AUTHORITY!,
-      applicationID: process.env.HERCULES_OIDC_CLIENT_ID!,
-    },
-  ],
-} satisfies AuthConfig;
+// No auth configuration needed - using open access for local restaurant app
+export default {};

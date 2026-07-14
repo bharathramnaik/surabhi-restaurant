@@ -7,7 +7,7 @@ A complete restaurant management web app built with React, Convex, and Tailwind 
 - **Dashboard** - Overview of orders, revenue, table status, low-stock alerts
 - **Menu Management** - Add/edit/delete menu items with English & Kannada names
 - **Tables & Bookings** - Manage restaurant tables and customer bookings
-- **Orders** - Create orders, track status, send WhatsApp bills
+- **Orders** - Create orders, track status, generate bills
 - **Inventory** - Track stock levels with low-stock alerts
 - **Employees** - Staff management with PIN-protected salary tracking
 - **Reports** - Revenue stats, top items, JSON export, settings
@@ -29,13 +29,6 @@ A complete restaurant management web app built with React, Convex, and Tailwind 
 
 All data is stored in Convex cloud database — 2-5 staff members see real-time updates simultaneously.
 
-## WhatsApp Billing
-
-Orders include a WhatsApp share button that opens a formatted bill with:
-- Restaurant name, address, GSTIN
-- All items with quantities and prices
-- GST (5%) and total
-
 ## PWA Installation (Android)
 
 1. Open the published app URL in Chrome on Android
@@ -45,8 +38,7 @@ Orders include a WhatsApp share button that opens a formatted bill with:
 ## Development
 
 ```bash
-pnpm install
-pnpm dev
+npm install
+npx convex dev    # Start Convex backend
+npm run dev       # Start Vite dev server
 ```
-
-This app is built on [Hercules](https://hercules.app) and uses Convex for the backend.

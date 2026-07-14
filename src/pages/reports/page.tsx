@@ -2,8 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/convex/_generated/api.js";
-import { useQuery, useMutation } from "convex/react";
+import { useData } from "@/lib/data-context.tsx";
 import { BarChart3, Download, Settings } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,29 +10,16 @@ import { toast } from "sonner";
 
 export default function ReportsPage() {
   const { t } = useTranslation("common");
-  const orders = useQuery(api.orders.getAll) ?? [];
-  const tables = useQuery(api.restaurantTables.getAll) ?? [];
-  const employees = useQuery(api.employees.getAll) ?? [];
-  const menuItems = useQuery(api.menuItems.getAll) ?? [];
-  const inventory = useQuery(api.inventory.getAll) ?? [];
-  const settings = useQuery(api.settings.getMultiple, { keys: ["gstin", "restaurantPhone", "restaurantAddress", "adminPin"] }) ?? {};
-  const setSetting = useMutation(api.settings.set);
-  const [gstinInput, setGstinInput] = useState("");
-  const [addressInput, setAddressInput] = useState("");
-  const [phoneInput, setPhoneInput] = useState("");
+  const { orders, tables, employees, menuItems, inventory, settings, updateSetting } = useData();
+  const [gstinInput, setGstinInput] = useState(settings.gstin ?? "29AABCS1429B1ZB");
+  const [addressInput, setAddressInput] = useState(settings.restaurantAddress ?? "");
+  const [phoneInput, setPhoneInput] = useState(settings.restaurantPhone ?? "");
   const [pinInput, setPinInput] = useState("");
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
-  if (!settingsLoaded && Object.keys(settings).length > 0) {
-    setGstinInput(settings.gstin ?? "29AABCS1429B1ZB");
-    setAddressInput(settings.restaurantAddress ?? "");
-    setPhoneInput(settings.restaurantPhone ?? "");
-    setPinInput("");
-    setSettingsLoaded(true);
-  }
+
   const today = new Date().toISOString().slice(0, 10);
   const thisMonth = new Date().toISOString().slice(0, 7);
-  const todayOrders = orders.filter((o) => new Date(o._creationTime).toISOString().startsWith(today) && o.status === "billed");
-  const monthOrders = orders.filter((o) => new Date(o._creationTime).toISOString().startsWith(thisMonth) && o.status === "billed");
+  const todayOrders = orders.filter((o) => new Date(o.createdAt).toISOString().startsWith(today) && o.status === "billed");
+  const monthOrders = orders.filter((o) => new Date(o.createdAt).toISOString().startsWith(thisMonth) && o.status === "billed");
   const totalOrders = orders.filter((o) => o.status === "billed");
   const todayRevenue = todayOrders.reduce((s, o) => s + o.total, 0);
   const monthRevenue = monthOrders.reduce((s, o) => s + o.total, 0);
@@ -47,6 +33,7 @@ export default function ReportsPage() {
     }
   }
   const topItems = Object.values(itemCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+
   const exportJSON = () => {
     const blob = new Blob([JSON.stringify({ orders, tables, employees, menuItems, inventory, exportedAt: new Date().toISOString() }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -55,15 +42,15 @@ export default function ReportsPage() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url); toast.success(t("msg.export_success"));
   };
-  const saveSettings = async () => {
-    const promises: Promise<void>[] = [];
-    if (gstinInput) promises.push(setSetting({ key: "gstin", value: gstinInput }));
-    if (addressInput) promises.push(setSetting({ key: "restaurantAddress", value: addressInput }));
-    if (phoneInput) promises.push(setSetting({ key: "restaurantPhone", value: phoneInput }));
-    if (pinInput && pinInput.length >= 4) promises.push(setSetting({ key: "adminPin", value: pinInput }));
-    await Promise.all(promises);
+
+  const saveSettings = () => {
+    if (gstinInput) updateSetting("gstin", gstinInput);
+    if (addressInput) updateSetting("restaurantAddress", addressInput);
+    if (phoneInput) updateSetting("restaurantPhone", phoneInput);
+    if (pinInput && pinInput.length >= 4) updateSetting("adminPin", pinInput);
     toast.success("Settings saved");
   };
+
   return (
     <div className="p-4 md:p-6 pb-20 md:pb-6 space-y-6">
       <h1 className="text-2xl font-bold">{t("nav.reports")}</h1>
@@ -113,7 +100,7 @@ export default function ReportsPage() {
             <div className="space-y-1 sm:col-span-2"><Label>Restaurant Address</Label><Input value={addressInput} onChange={(e) => setAddressInput(e.target.value)} placeholder="Main Road, Bangalore, Karnataka" /></div>
             <div className="space-y-1"><Label>New Admin PIN (4+ digits)</Label><Input type="password" value={pinInput} onChange={(e) => setPinInput(e.target.value)} placeholder="Leave blank to keep current" maxLength={6} /><p className="text-xs text-muted-foreground">Used for salary access</p></div>
           </div>
-          <Button onClick={() => { void saveSettings(); }} className="cursor-pointer">{t("btn.save")} Settings</Button>
+          <Button onClick={saveSettings} className="cursor-pointer">{t("btn.save")} Settings</Button>
         </CardContent>
       </Card>
     </div>
