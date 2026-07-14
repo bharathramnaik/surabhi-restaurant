@@ -40,7 +40,7 @@ export default function TablesPage() {
   };
 
   const handleSaveBooking = () => {
-    if (!bookingForm.guestName || !bookingForm.tableId) { toast.error("Fill guest name and select table"); return; }
+    if (!bookingForm.guestName || !bookingForm.tableId) { toast.error(t("msg.fill_guest_table")); return; }
     addBooking(bookingForm);
     const table = tables.find((t) => t.id === bookingForm.tableId);
     if (table) updateTable(bookingForm.tableId, { status: "reserved" });
@@ -52,14 +52,14 @@ export default function TablesPage() {
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <h1 className="text-2xl font-bold">{t("nav.tables")}</h1>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => openAddBooking()} className="cursor-pointer"><CalendarPlus className="w-4 h-4 mr-1" /> Booking</Button>
+          <Button variant="secondary" size="sm" onClick={() => openAddBooking()} className="cursor-pointer"><CalendarPlus className="w-4 h-4 mr-1" /> {t("btn.booking")}</Button>
           <Button size="sm" onClick={openAddTable} className="cursor-pointer"><Plus className="w-4 h-4 mr-1" /> {t("btn.add")}</Button>
         </div>
       </div>
       <div className="flex gap-2 flex-wrap">
         {["all", "available", "occupied", "reserved"].map((s) => (
           <Button key={s} variant={filterStatus === s ? "default" : "secondary"} size="sm" onClick={() => setFilterStatus(s)} className="cursor-pointer text-xs">
-            {s === "all" ? "All" : t(`label.${s}`)}
+            {s === "all" ? t("label.all") : t(`label.${s}`)}
           </Button>
         ))}
       </div>
@@ -79,7 +79,7 @@ export default function TablesPage() {
       </div>
       {activeBookings.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Upcoming Bookings</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t("label.upcoming_bookings")}</h2>
           <div className="space-y-2">
             {activeBookings.map((b) => (
               <Card key={b.id} className="shadow-sm"><CardContent className="pt-3 pb-3">
@@ -97,14 +97,14 @@ export default function TablesPage() {
       )}
       <Dialog open={tableDialogOpen} onOpenChange={setTableDialogOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{editingTableId ? "Edit Table" : "Add Table"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingTableId ? t("btn.edit") : t("btn.add")} {t("label.table")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>Table Number</Label><Input type="number" min={1} value={tableForm.number} onChange={(e) => setTableForm({ ...tableForm, number: Number(e.target.value) })} /></div>
-              <div className="space-y-1"><Label>Capacity</Label><Input type="number" min={1} value={tableForm.capacity} onChange={(e) => setTableForm({ ...tableForm, capacity: Number(e.target.value) })} /></div>
+              <div className="space-y-1"><Label>{t("label.table_number")}</Label><Input type="number" min={1} value={tableForm.number} onChange={(e) => setTableForm({ ...tableForm, number: Number(e.target.value) })} /></div>
+              <div className="space-y-1"><Label>{t("label.capacity")}</Label><Input type="number" min={1} value={tableForm.capacity} onChange={(e) => setTableForm({ ...tableForm, capacity: Number(e.target.value) })} /></div>
             </div>
-            <div className="space-y-1"><Label>Floor</Label><Select value={tableForm.floor} onValueChange={(v) => setTableForm({ ...tableForm, floor: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Ground Floor">Ground Floor</SelectItem><SelectItem value="First Floor">First Floor</SelectItem></SelectContent></Select></div>
-            <div className="space-y-1"><Label>Status</Label><Select value={tableForm.status} onValueChange={(v: "available" | "occupied" | "reserved") => setTableForm({ ...tableForm, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="available">Available</SelectItem><SelectItem value="occupied">Occupied</SelectItem><SelectItem value="reserved">Reserved</SelectItem></SelectContent></Select></div>
+            <div className="space-y-1"><Label>{t("label.floor")}</Label><Select value={tableForm.floor} onValueChange={(v) => setTableForm({ ...tableForm, floor: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Ground Floor">{t("label.ground_floor")}</SelectItem><SelectItem value="First Floor">{t("label.first_floor")}</SelectItem></SelectContent></Select></div>
+            <div className="space-y-1"><Label>{t("label.status")}</Label><Select value={tableForm.status} onValueChange={(v: "available" | "occupied" | "reserved") => setTableForm({ ...tableForm, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="available">{t("label.available")}</SelectItem><SelectItem value="occupied">{t("label.occupied")}</SelectItem><SelectItem value="reserved">{t("label.reserved")}</SelectItem></SelectContent></Select></div>
             <div className="flex gap-2 justify-end pt-2">
               {editingTableId && <Button variant="destructive" size="sm" onClick={() => { deleteTable(editingTableId); setTableDialogOpen(false); }} className="cursor-pointer"><Trash2 className="w-4 h-4" /></Button>}
               <Button variant="secondary" onClick={() => setTableDialogOpen(false)} className="cursor-pointer">{t("btn.cancel")}</Button>
@@ -115,16 +115,16 @@ export default function TablesPage() {
       </Dialog>
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>New Booking</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("btn.booking")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1"><Label>Table</Label><Select value={bookingForm.tableId} onValueChange={(v) => setBookingForm({ ...bookingForm, tableId: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{tables.map((t) => <SelectItem key={t.id} value={t.id}>Table {t.number} ({t.capacity}p)</SelectItem>)}</SelectContent></Select></div>
-            <div className="space-y-1"><Label>Guest Name *</Label><Input value={bookingForm.guestName} onChange={(e) => setBookingForm({ ...bookingForm, guestName: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Phone</Label><Input value={bookingForm.phone} onChange={(e) => setBookingForm({ ...bookingForm, phone: e.target.value })} /></div>
+            <div className="space-y-1"><Label>{t("label.table")}</Label><Select value={bookingForm.tableId} onValueChange={(v) => setBookingForm({ ...bookingForm, tableId: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{tables.map((tbl) => <SelectItem key={tbl.id} value={tbl.id}>{t("label.table")} {tbl.number} ({tbl.capacity}p)</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1"><Label>{t("label.guest_name")} *</Label><Input value={bookingForm.guestName} onChange={(e) => setBookingForm({ ...bookingForm, guestName: e.target.value })} /></div>
+            <div className="space-y-1"><Label>{t("label.phone")}</Label><Input value={bookingForm.phone} onChange={(e) => setBookingForm({ ...bookingForm, phone: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>Date</Label><Input type="date" value={bookingForm.date} onChange={(e) => setBookingForm({ ...bookingForm, date: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Time</Label><Input type="time" value={bookingForm.time} onChange={(e) => setBookingForm({ ...bookingForm, time: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("label.date")}</Label><Input type="date" value={bookingForm.date} onChange={(e) => setBookingForm({ ...bookingForm, date: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("label.time")}</Label><Input type="time" value={bookingForm.time} onChange={(e) => setBookingForm({ ...bookingForm, time: e.target.value })} /></div>
             </div>
-            <div className="space-y-1"><Label>Party Size</Label><Input type="number" min={1} value={bookingForm.partySize} onChange={(e) => setBookingForm({ ...bookingForm, partySize: Number(e.target.value) })} /></div>
+            <div className="space-y-1"><Label>{t("label.party_size")}</Label><Input type="number" min={1} value={bookingForm.partySize} onChange={(e) => setBookingForm({ ...bookingForm, partySize: Number(e.target.value) })} /></div>
             <div className="flex gap-2 justify-end pt-2">
               <Button variant="secondary" onClick={() => setBookingDialogOpen(false)} className="cursor-pointer">{t("btn.cancel")}</Button>
               <Button onClick={handleSaveBooking} className="cursor-pointer">{t("btn.save")}</Button>

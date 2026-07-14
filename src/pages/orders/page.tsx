@@ -44,27 +44,6 @@ function formatInvoice(order: { orderNumber: number; customerName: string; custo
   ].filter(Boolean).join("\n");
 }
 
-function handlePrint(order: { orderNumber: number; customerName: string; customerPhone: string; tableNumber: number | null; items: { name: string; price: number; quantity: number }[]; subtotal: number; tax: number; total: number; createdAt: string; status: string }, settings: Record<string, string>) {
-  const invoiceText = formatInvoice(order, settings);
-  const win = window.open("", "_blank");
-  if (!win) { toast.error("Popup blocked. Allow popups to print."); return; }
-  win.document.write(`<html><head><title>Invoice #${order.orderNumber}</title><style>
-    body { font-family: 'Courier New', monospace; white-space: pre; padding: 20px; font-size: 14px; }
-    @media print { @page { margin: 0; } body { padding: 10px; } }
-  </style></head><body>${invoiceText}</body></html>`);
-  win.document.close();
-  win.focus();
-  setTimeout(() => { win.print(); win.close(); }, 300);
-}
-
-function handleWhatsApp(order: { orderNumber: number; customerName: string; customerPhone: string; tableNumber: number | null; items: { name: string; price: number; quantity: number }[]; subtotal: number; tax: number; total: number; createdAt: string; status: string }, settings: Record<string, string>, phone?: string) {
-  const invoiceText = formatInvoice(order, settings);
-  const encoded = encodeURIComponent(invoiceText);
-  const targetPhone = phone || "";
-  const url = targetPhone ? `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encoded}` : `https://api.whatsapp.com/send?text=${encoded}`;
-  window.open(url, "_blank");
-}
-
 export default function OrdersPage() {
   const { t } = useTranslation("common");
   const { orders, tables, menuItems, settings, addOrder, updateOrder, deleteOrder, updateTable } = useData();
@@ -100,7 +79,7 @@ export default function OrdersPage() {
   const total = subtotal + tax;
 
   const handleSave = () => {
-    if (form.items.length === 0) { toast.error("Add at least one item"); return; }
+    if (form.items.length === 0) { toast.error(t("msg.add_item_error")); return; }
     if (editingId) {
       const prev = orders.find((o) => o.id === editingId);
       updateOrder(editingId, { ...form, subtotal, tax, total });
@@ -115,6 +94,27 @@ export default function OrdersPage() {
     toast.success(t("msg.saved")); setDialogOpen(false);
   };
 
+  const handlePrintOrder = (order: typeof orders[0]) => {
+    const invoiceText = formatInvoice(order, settings);
+    const win = window.open("", "_blank");
+    if (!win) { toast.error(t("msg.popup_blocked")); return; }
+    win.document.write(`<html><head><title>Invoice #${order.orderNumber}</title><style>
+      body { font-family: 'Courier New', monospace; white-space: pre; padding: 20px; font-size: 14px; }
+      @media print { @page { margin: 0; } body { padding: 10px; } }
+    </style></head><body>${invoiceText}</body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); win.close(); }, 300);
+  };
+
+  const handleWhatsAppOrder = (order: typeof orders[0]) => {
+    const invoiceText = formatInvoice(order, settings);
+    const encoded = encodeURIComponent(invoiceText);
+    const targetPhone = order.customerPhone || "";
+    const url = targetPhone ? `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encoded}` : `https://api.whatsapp.com/send?text=${encoded}`;
+    window.open(url, "_blank");
+  };
+
   const handleStatusChange = (id: string, status: "pending" | "in_progress" | "served" | "billed") => {
     updateOrder(id, { status });
     if (status === "billed") { const order = orders.find((o) => o.id === id); if (order?.tableId) updateTable(order.tableId, { status: "available" }); }
@@ -127,10 +127,10 @@ export default function OrdersPage() {
         <Button size="sm" onClick={openNewOrder} className="cursor-pointer"><Plus className="w-4 h-4 mr-1" /> {t("btn.new_order")}</Button>
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search orders..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" /></div>
+        <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder={t("btn.search")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" /></div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="pending">{t("label.pending")}</SelectItem><SelectItem value="in_progress">{t("label.in_progress")}</SelectItem><SelectItem value="served">{t("label.served")}</SelectItem><SelectItem value="billed">{t("label.billed")}</SelectItem></SelectContent>
+          <SelectContent><SelectItem value="all">{t("label.all_status")}</SelectItem><SelectItem value="pending">{t("label.pending")}</SelectItem><SelectItem value="in_progress">{t("label.in_progress")}</SelectItem><SelectItem value="served">{t("label.served")}</SelectItem><SelectItem value="billed">{t("label.billed")}</SelectItem></SelectContent>
         </Select>
       </div>
       <div className="space-y-3">
@@ -147,14 +147,14 @@ export default function OrdersPage() {
                 <p className="text-sm text-muted-foreground mt-1">{order.customerName || "Walk-in"}{order.tableNumber ? ` • Table ${order.tableNumber}` : ""}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{order.items.length} items • ₹{order.total}</p>
                 <div className="flex gap-1 mt-2 flex-wrap">
-                  {order.status === "pending" && <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleStatusChange(order.id, "in_progress")}>Start</Button>}
-                  {order.status === "in_progress" && <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleStatusChange(order.id, "served")}>Serve</Button>}
-                  {order.status === "served" && <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleStatusChange(order.id, "billed")}><Receipt className="w-3 h-3 mr-1" /> Bill</Button>}
+                  {order.status === "pending" && <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleStatusChange(order.id, "in_progress")}>{t("btn.start")}</Button>}
+                  {order.status === "in_progress" && <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleStatusChange(order.id, "served")}>{t("btn.serve")}</Button>}
+                  {order.status === "served" && <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleStatusChange(order.id, "billed")}><Receipt className="w-3 h-3 mr-1" /> {t("btn.bill")}</Button>}
                    {order.status === "billed" && (
                     <>
-                      <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handlePrint(order, settings)}><Printer className="w-3 h-3 mr-1" /> Print</Button>
-                      <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleWhatsApp(order, settings, order.customerPhone)}><Share2 className="w-3 h-3 mr-1" /> WhatsApp</Button>
-                      <Button size="sm" variant="destructive" className="cursor-pointer text-xs h-6" onClick={() => { if (confirm("Delete this billed order?")) deleteOrder(order.id); }}><Trash2 className="w-3 h-3 mr-1" /> Delete</Button>
+                      <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handlePrintOrder(order)}><Printer className="w-3 h-3 mr-1" /> {t("btn.print")}</Button>
+                      <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleWhatsAppOrder(order)}><Share2 className="w-3 h-3 mr-1" /> {t("btn.whatsapp")}</Button>
+                      <Button size="sm" variant="destructive" className="cursor-pointer text-xs h-6" onClick={() => { if (confirm(t("msg.delete_billed_order"))) deleteOrder(order.id); }}><Trash2 className="w-3 h-3 mr-1" /> {t("btn.delete")}</Button>
                     </>
                   )}
                 </div>
@@ -166,17 +166,17 @@ export default function OrdersPage() {
       </div>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editingId ? "Edit Order" : "New Order"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? t("btn.edit") : t("btn.new_order")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>Customer Name</Label><Input value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} placeholder="Walk-in" /></div>
-              <div className="space-y-1"><Label>Phone</Label><Input value={form.customerPhone} onChange={(e) => setForm({ ...form, customerPhone: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("label.customer_name")}</Label><Input value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} placeholder={t("label.walk_in")} /></div>
+              <div className="space-y-1"><Label>{t("label.phone")}</Label><Input value={form.customerPhone} onChange={(e) => setForm({ ...form, customerPhone: e.target.value })} /></div>
             </div>
-            <div className="space-y-1"><Label>Table</Label><Select value={form.tableId ?? "none"} onValueChange={(v) => { const t = tables.find((t) => t.id === v); setForm({ ...form, tableId: v === "none" ? null : v, tableNumber: t?.number ?? null }); }}><SelectTrigger><SelectValue placeholder="No table" /></SelectTrigger><SelectContent><SelectItem value="none">No table</SelectItem>{tables.map((t) => <SelectItem key={t.id} value={t.id}>Table {t.number} ({t.capacity}p)</SelectItem>)}</SelectContent></Select></div>
-            <div className="space-y-1"><Label>Notes</Label><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+            <div className="space-y-1"><Label>{t("label.table")}</Label><Select value={form.tableId ?? "none"} onValueChange={(v) => { const tbl = tables.find((tbl) => tbl.id === v); setForm({ ...form, tableId: v === "none" ? null : v, tableNumber: tbl?.number ?? null }); }}><SelectTrigger><SelectValue placeholder={t("label.no_table")} /></SelectTrigger><SelectContent><SelectItem value="none">{t("label.no_table")}</SelectItem>{tables.map((tbl) => <SelectItem key={tbl.id} value={tbl.id}>{t("label.table")} {tbl.number} ({tbl.capacity}p)</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1"><Label>{t("label.notes")}</Label><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
             <div className="border rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2"><Label>Items</Label><Button size="sm" variant="secondary" onClick={() => setAddItemOpen(true)} className="cursor-pointer"><Plus className="w-3 h-3 mr-1" /> Add</Button></div>
-              {form.items.length === 0 ? <p className="text-xs text-muted-foreground text-center py-3">No items added</p> : (
+              <div className="flex items-center justify-between mb-2"><Label>{t("label.items")}</Label><Button size="sm" variant="secondary" onClick={() => setAddItemOpen(true)} className="cursor-pointer"><Plus className="w-3 h-3 mr-1" /> {t("btn.add")}</Button></div>
+              {form.items.length === 0 ? <p className="text-xs text-muted-foreground text-center py-3">{t("msg.no_items")}</p> : (
                 <div className="space-y-2">{form.items.map((item) => (
                   <div key={item.menuItemId} className="flex items-center justify-between text-sm">
                     <span>{item.name} x{item.quantity}</span>
@@ -199,10 +199,10 @@ export default function OrdersPage() {
       </Dialog>
       <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Add Item</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("btn.add_item")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1"><Label>Menu Item</Label><Select value={selectedMenuItem} onValueChange={setSelectedMenuItem}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{menuItems.filter((m) => m.available).map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — ₹{m.price}</SelectItem>)}</SelectContent></Select></div>
-            <div className="space-y-1"><Label>Quantity</Label><Input type="number" min={1} value={selectedQty} onChange={(e) => setSelectedQty(Number(e.target.value))} /></div>
+            <div className="space-y-1"><Label>{t("label.menu_item")}</Label><Select value={selectedMenuItem} onValueChange={setSelectedMenuItem}><SelectTrigger><SelectValue placeholder={t("btn.search")} /></SelectTrigger><SelectContent>{menuItems.filter((m) => m.available).map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — ₹{m.price}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1"><Label>{t("label.quantity")}</Label><Input type="number" min={1} value={selectedQty} onChange={(e) => setSelectedQty(Number(e.target.value))} /></div>
             <div className="flex gap-2 justify-end"><Button variant="secondary" onClick={() => setAddItemOpen(false)} className="cursor-pointer">{t("btn.cancel")}</Button><Button onClick={handleAddItem} disabled={!selectedMenuItem} className="cursor-pointer">{t("btn.add")}</Button></div>
           </div>
         </DialogContent>

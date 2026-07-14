@@ -48,32 +48,32 @@ export default function ReportsPage() {
     if (addressInput) updateSetting("restaurantAddress", addressInput);
     if (phoneInput) updateSetting("restaurantPhone", phoneInput);
     if (pinInput && pinInput.length >= 4) updateSetting("adminPin", pinInput);
-    toast.success("Settings saved");
+    toast.success(t("msg.settings_saved"));
   };
 
   return (
     <div className="p-4 md:p-6 pb-20 md:pb-6 space-y-6">
       <h1 className="text-2xl font-bold">{t("nav.reports")}</h1>
       <div>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2"><BarChart3 className="w-4 h-4" /> Sales Summary</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2"><BarChart3 className="w-4 h-4" /> {t("label.sales_summary")}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: "Today's Revenue", value: `₹${todayRevenue.toLocaleString()}`, sub: `${todayOrders.length} orders billed` },
-            { label: "This Month", value: `₹${monthRevenue.toLocaleString()}`, sub: `${monthOrders.length} orders billed` },
-            { label: "All-Time Revenue", value: `₹${totalRevenue.toLocaleString()}`, sub: `${totalOrders.length} billed orders` },
+            { label: t("label.today_revenue"), value: `₹${todayRevenue.toLocaleString()}`, sub: `${todayOrders.length} ${t("nav.orders").toLowerCase()}` },
+            { label: t("label.this_month"), value: `₹${monthRevenue.toLocaleString()}`, sub: `${monthOrders.length} ${t("nav.orders").toLowerCase()}` },
+            { label: t("label.all_time_revenue"), value: `₹${totalRevenue.toLocaleString()}`, sub: `${totalOrders.length} ${t("nav.orders").toLowerCase()}` },
           ].map(({ label, value, sub }) => (
             <Card key={label} className="shadow-sm"><CardContent className="pt-4 pb-4"><p className="text-sm text-muted-foreground">{label}</p><p className="text-2xl font-bold mt-1">{value}</p><p className="text-xs text-muted-foreground mt-1">{sub}</p></CardContent></Card>
           ))}
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[{ label: "Menu Items", value: menuItems.length }, { label: "Tables", value: tables.length }, { label: "Total Orders", value: orders.length }, { label: "Employees", value: employees.length }].map(({ label, value }) => (
+        {[{ label: t("label.menu_item") + "s", value: menuItems.length }, { label: t("label.table") + "s", value: tables.length }, { label: t("label.total_orders"), value: orders.length }, { label: t("label.employees"), value: employees.length }].map(({ label, value }) => (
           <Card key={label} className="shadow-sm"><CardContent className="pt-4 pb-4 text-center"><p className="text-3xl font-bold text-primary">{value}</p><p className="text-sm text-muted-foreground mt-1">{label}</p></CardContent></Card>
         ))}
       </div>
       {topItems.length > 0 && (
         <Card className="shadow-sm">
-          <CardHeader className="pb-3"><CardTitle className="text-base">Top Selling Items</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base">{t("label.top_selling_items")}</CardTitle></CardHeader>
           <CardContent className="pt-0 space-y-2">
             {topItems.map((item, i) => (
               <div key={item.name} className="flex items-center justify-between">
@@ -85,22 +85,22 @@ export default function ReportsPage() {
         </Card>
       )}
       <Card className="shadow-sm">
-        <CardHeader className="pb-3"><CardTitle className="text-base">Export Data</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base">{t("label.export_data")}</CardTitle></CardHeader>
         <CardContent className="pt-0 space-y-3">
-          <p className="text-sm text-muted-foreground">Download all restaurant data as a JSON file for backup.</p>
+          <p className="text-sm text-muted-foreground">{t("label.export_description")}</p>
           <Button onClick={exportJSON} className="cursor-pointer"><Download className="w-4 h-4 mr-2" /> {t("btn.export")}</Button>
         </CardContent>
       </Card>
       <Card className="shadow-sm">
-        <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Settings className="w-4 h-4" /> Restaurant Settings</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Settings className="w-4 h-4" /> {t("label.restaurant_settings")}</CardTitle></CardHeader>
         <CardContent className="pt-0 space-y-3">
           <div className="grid sm:grid-cols-2 gap-3">
-            <div className="space-y-1"><Label>GSTIN Number</Label><Input value={gstinInput} onChange={(e) => setGstinInput(e.target.value)} placeholder="29AABCS1429B1ZB" /><p className="text-xs text-muted-foreground">Appears on all bills</p></div>
-            <div className="space-y-1"><Label>Restaurant Phone</Label><Input value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder="9876543210" /></div>
-            <div className="space-y-1 sm:col-span-2"><Label>Restaurant Address</Label><Input value={addressInput} onChange={(e) => setAddressInput(e.target.value)} placeholder="Main Road, Bangalore, Karnataka" /></div>
-            <div className="space-y-1"><Label>New Admin PIN (4+ digits)</Label><Input type="password" value={pinInput} onChange={(e) => setPinInput(e.target.value)} placeholder="Leave blank to keep current" maxLength={6} /><p className="text-xs text-muted-foreground">Used for salary access</p></div>
+            <div className="space-y-1"><Label>{t("label.gstin")}</Label><Input value={gstinInput} onChange={(e) => setGstinInput(e.target.value)} placeholder="29AABCS1429B1ZB" /><p className="text-xs text-muted-foreground">{t("label.gstin_hint")}</p></div>
+            <div className="space-y-1"><Label>{t("label.restaurant_phone")}</Label><Input value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder="9876543210" /></div>
+            <div className="space-y-1 sm:col-span-2"><Label>{t("label.restaurant_address")}</Label><Input value={addressInput} onChange={(e) => setAddressInput(e.target.value)} placeholder="Main Road, Bangalore, Karnataka" /></div>
+            <div className="space-y-1"><Label>{t("label.new_pin")}</Label><Input type="password" value={pinInput} onChange={(e) => setPinInput(e.target.value)} placeholder={t("label.leave_blank")} maxLength={6} /><p className="text-xs text-muted-foreground">{t("label.pin_help")}</p></div>
           </div>
-          <Button onClick={saveSettings} className="cursor-pointer">{t("btn.save")} Settings</Button>
+          <Button onClick={saveSettings} className="cursor-pointer">{t("btn.save")} {t("btn.settings")}</Button>
         </CardContent>
       </Card>
     </div>

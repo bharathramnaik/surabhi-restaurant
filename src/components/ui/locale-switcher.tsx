@@ -1,12 +1,14 @@
 import { useTranslation } from "react-i18next";
-import { SUPPORTED_LOCALES } from "@/i18n.ts";
-import { changeLocale, type SupportedLocale } from "@/i18n.ts";
+import { SUPPORTED_LOCALES, setLocaleInPath, type SupportedLocale } from "@/i18n.ts";
 import { Globe } from "lucide-react";
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils.ts";
 
 export default function LocaleSwitcher() {
   const { i18n } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const current = i18n.language as SupportedLocale;
 
@@ -30,7 +32,7 @@ export default function LocaleSwitcher() {
               <button
                 key={code}
                 onClick={() => {
-                  void changeLocale(code as SupportedLocale);
+                  navigate(setLocaleInPath(code, location.pathname, location.search, location.hash));
                   setOpen(false);
                 }}
                 className={cn(

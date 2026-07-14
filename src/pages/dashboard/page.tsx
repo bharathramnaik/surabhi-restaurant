@@ -45,10 +45,10 @@ export default function Dashboard() {
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-amber-800">Low Stock Alert</p>
+            <p className="text-sm font-medium text-amber-800">{t("label.low_stock_alert", { ns: "common" })}</p>
             <p className="text-xs text-amber-600 truncate">{lowStockItems.map((i) => i.name).join(", ")}</p>
           </div>
-          <Button size="sm" variant="ghost" className="text-amber-700 cursor-pointer text-xs" onClick={() => navigate(`/${lng}/inventory`)}>View →</Button>
+           <Button size="sm" variant="ghost" className="text-amber-700 cursor-pointer text-xs" onClick={() => navigate(`/${lng}/inventory`)}>{t("btn.view", { ns: "common" })} →</Button>
         </div>
       )}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -129,7 +129,7 @@ export default function Dashboard() {
               { label: t("new_order"), icon: Plus, path: "orders", className: "bg-primary text-primary-foreground hover:bg-primary/90" },
               { label: t("new_booking"), icon: BookOpen, path: "tables", className: "bg-sky-600 text-white hover:bg-sky-700" },
               { label: t("view_menu"), icon: BarChart3, path: "menu", className: "bg-secondary text-secondary-foreground hover:bg-secondary/80" },
-              { label: "Inventory", icon: Package, path: "inventory", className: "bg-secondary text-secondary-foreground hover:bg-secondary/80" },
+              { label: t("nav.inventory", { ns: "common" }), icon: Package, path: "inventory", className: "bg-secondary text-secondary-foreground hover:bg-secondary/80" },
             ].map(({ label, icon: Icon, path, className }) => (
               <Button key={label} onClick={() => navigate(`/${lng}/${path}`)} className={cn("flex items-center gap-2 h-12 cursor-pointer", className)} variant="ghost">
                 <Icon className="w-4 h-4" /><span className="text-sm">{label}</span>

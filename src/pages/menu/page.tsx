@@ -42,7 +42,7 @@ export default function MenuPage() {
   };
 
   const handleSave = () => {
-    if (!form.name || !form.categoryId || form.price <= 0) { toast.error("Fill name, category, and price"); return; }
+    if (!form.name || !form.categoryId || form.price <= 0) { toast.error(t("msg.fill_name_category_price")); return; }
     const data = form.subCategory ? form : { ...form, subCategory: undefined };
     if (editingId) updateMenuItem(editingId, data);
     else addMenuItem(data);
@@ -79,7 +79,7 @@ export default function MenuPage() {
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
           <SelectTrigger className="w-full sm:w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="all">{t("label.all_categories")}</SelectItem>
             {categories.map((c) => <SelectItem key={c.id} value={c.id}>{isKn ? c.nameKn : c.name}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -110,7 +110,7 @@ export default function MenuPage() {
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{isKn ? item.descriptionKn : item.description}</p>
                             <p className="text-primary font-bold mt-2">₹{item.price}</p>
-                            {!item.available && <span className="text-xs text-destructive">Unavailable</span>}
+                            {!item.available && <span className="text-xs text-destructive">{t("label.unavailable")}</span>}
                           </div>
                           <div className="flex gap-1 ml-2">
                             <Button variant="ghost" size="icon" className="h-7 w-7 cursor-pointer" onClick={() => openEdit(item)}><Pencil className="w-3.5 h-3.5" /></Button>
@@ -136,7 +136,7 @@ export default function MenuPage() {
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{isKn ? item.descriptionKn : item.description}</p>
                           <p className="text-primary font-bold mt-2">₹{item.price}</p>
-                          {!item.available && <span className="text-xs text-destructive">Unavailable</span>}
+                          {!item.available && <span className="text-xs text-destructive">{t("label.unavailable")}</span>}
                         </div>
                         <div className="flex gap-1 ml-2">
                           <Button variant="ghost" size="icon" className="h-7 w-7 cursor-pointer" onClick={() => openEdit(item)}><Pencil className="w-3.5 h-3.5" /></Button>
@@ -154,23 +154,23 @@ export default function MenuPage() {
       {filtered.length === 0 && <div className="text-center py-12 text-muted-foreground"><Leaf className="w-10 h-10 mx-auto mb-2 opacity-30" /><p>{t("msg.no_data")}</p></div>}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editingId ? t("btn.edit") : t("btn.add")} Menu Item</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? t("btn.edit") : t("btn.add")} {t("label.menu_item")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>Name (English)</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Chicken Curry" /></div>
-              <div className="space-y-1"><Label>Name (ಕನ್ನಡ)</Label><Input value={form.nameKn} onChange={(e) => setForm({ ...form, nameKn: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("label.name")} (EN)</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Chicken Curry" /></div>
+              <div className="space-y-1"><Label>{t("label.name")} (ಕನ್ನಡ)</Label><Input value={form.nameKn} onChange={(e) => setForm({ ...form, nameKn: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>Description (EN)</Label><Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Description (KN)</Label><Textarea rows={2} value={form.descriptionKn} onChange={(e) => setForm({ ...form, descriptionKn: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("label.description")} (EN)</Label><Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("label.description")} (KN)</Label><Textarea rows={2} value={form.descriptionKn} onChange={(e) => setForm({ ...form, descriptionKn: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1"><Label>{t("label.price")} *</Label><Input type="number" min={0} value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} /></div>
               <div className="space-y-1"><Label>{t("label.category")} *</Label><Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{categories.map((c) => <SelectItem key={c.id} value={c.id}>{isKn ? c.nameKn : c.name}</SelectItem>)}</SelectContent></Select></div>
             </div>
-            <div className="space-y-1"><Label>Subcategory</Label><Input value={form.subCategory} onChange={(e) => setForm({ ...form, subCategory: e.target.value })} placeholder="e.g. Chicken items" /></div>
+            <div className="space-y-1"><Label>{t("label.subcategory")}</Label><Input value={form.subCategory} onChange={(e) => setForm({ ...form, subCategory: e.target.value })} placeholder="e.g. Chicken items" /></div>
             <div className="flex gap-6">
-              <div className="flex items-center gap-2"><Switch checked={form.isVeg} onCheckedChange={(v) => setForm({ ...form, isVeg: v })} id="isVeg" /><Label htmlFor="isVeg">Vegetarian</Label></div>
+              <div className="flex items-center gap-2"><Switch checked={form.isVeg} onCheckedChange={(v) => setForm({ ...form, isVeg: v })} id="isVeg" /><Label htmlFor="isVeg">{t("label.vegetarian")}</Label></div>
               <div className="flex items-center gap-2"><Switch checked={form.available} onCheckedChange={(v) => setForm({ ...form, available: v })} id="avail" /><Label htmlFor="avail">{t("label.available")}</Label></div>
             </div>
             <div className="flex gap-2 justify-end pt-2">
@@ -181,10 +181,10 @@ export default function MenuPage() {
         </DialogContent>
       </Dialog>
       <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
-        <DialogContent className="max-w-sm"><DialogHeader><DialogTitle>Add Category</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-sm"><DialogHeader><DialogTitle>{t("btn.add")} {t("label.category")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1"><Label>Name (English)</Label><Input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} placeholder="e.g. Starters" /></div>
-            <div className="space-y-1"><Label>Name (ಕನ್ನಡ)</Label><Input value={newCatNameKn} onChange={(e) => setNewCatNameKn(e.target.value)} /></div>
+            <div className="space-y-1"><Label>{t("label.name")} (EN)</Label><Input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} placeholder="e.g. Starters" /></div>
+            <div className="space-y-1"><Label>{t("label.name")} (ಕನ್ನಡ)</Label><Input value={newCatNameKn} onChange={(e) => setNewCatNameKn(e.target.value)} /></div>
             <div className="flex gap-2 justify-end">
               <Button variant="secondary" onClick={() => setCatDialogOpen(false)} className="cursor-pointer">{t("btn.cancel")}</Button>
               <Button onClick={handleAddCat} className="cursor-pointer">{t("btn.save")}</Button>
