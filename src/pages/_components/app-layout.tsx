@@ -1,4 +1,3 @@
-import LocaleSwitcher from "@/components/ui/locale-switcher.tsx";
 import { cn } from "@/lib/utils.ts";
 import { useEffect } from "react";
 import {
@@ -105,7 +104,7 @@ export default function AppLayout() {
         </div>
       )}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 border-b border-sky-200/50 dark:border-sky-400/30 flex items-center justify-between px-4 bg-sky-200/80 dark:bg-sky-400/20 backdrop-blur-sm flex-shrink-0">
+        <header className="border-b border-sky-200/50 dark:border-sky-400/30 flex items-center justify-between px-4 bg-sky-200/80 dark:bg-sky-400/20 backdrop-blur-sm flex-shrink-0">
           <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-accent cursor-pointer">
             <Menu className="w-5 h-5" />
           </button>
@@ -116,7 +115,6 @@ export default function AppLayout() {
           <div className="hidden md:flex items-center gap-2">
             {!isOnline && <span className="text-xs text-destructive flex items-center gap-1"><WifiOff className="w-3 h-3" /> Offline</span>}
           </div>
-          <LocaleSwitcher />
         </header>
         <main className="flex-1 overflow-y-auto"><Outlet /></main>
       </div>

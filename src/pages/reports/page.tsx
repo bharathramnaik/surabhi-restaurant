@@ -16,17 +16,41 @@ export default function ReportsPage() {
   const [addressInput, setAddressInput] = useState(settings.restaurantAddress ?? "");
   const [phoneInput, setPhoneInput] = useState(settings.restaurantPhone ?? "");
   const [pinInput, setPinInput] = useState("");
+  const [reportPeriod, setReportPeriod] = useState<"day" | "week" | "month" | "quarter" | "year">("month");
+  const [reportDate, setReportDate] = useState(new Date().toISOString().slice(0, 10));
   const [reportMonth, setReportMonth] = useState(String(new Date().getMonth() + 1));
   const [reportYear, setReportYear] = useState(String(new Date().getFullYear()));
+  const [reportQuarter, setReportQuarter] = useState(String(Math.floor(new Date().getMonth() / 3) + 1));
+
+  const inRange = (createdAt: string, start: Date, end: Date) => {
+    const t = new Date(createdAt).getTime();
+    return t >= start.getTime() && t <= end.getTime();
+  };
+  const rangeFor = (period: "day" | "week" | "month" | "quarter" | "year", anchor: Date) => {
+    const start = new Date(anchor); start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    if (period === "day") { end.setHours(23, 59, 59, 999); }
+    else if (period === "week") { start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); end.setDate(start.getDate() + 6); end.setHours(23, 59, 59, 999); }
+    else if (period === "month") { start.setDate(1); end.setMonth(start.getMonth() + 1, 0); end.setHours(23, 59, 59, 999); }
+    else if (period === "quarter") { start.setMonth(Math.floor(start.getMonth() / 3) * 3, 1); end.setMonth(start.getMonth() + 3, 0); end.setHours(23, 59, 59, 999); }
+    else { start.setMonth(0, 1); end.setMonth(11, 31); end.setHours(23, 59, 59, 999); }
+    return { start, end };
+  };
 
   const today = new Date().toISOString().slice(0, 10);
-  const thisMonth = new Date().toISOString().slice(0, 7);
-  const todayOrders = orders.filter((o) => new Date(o.createdAt).toISOString().startsWith(today) && o.status === "billed");
-  const monthOrders = orders.filter((o) => new Date(o.createdAt).toISOString().startsWith(thisMonth) && o.status === "billed");
+  const now = new Date();
+  const billedIn = (r: { start: Date; end: Date }) => orders.filter((o) => o.status === "billed" && inRange(o.createdAt, r.start, r.end));
+  const dayOrders = billedIn(rangeFor("day", now));
+  const weekOrders = billedIn(rangeFor("week", now));
+  const monthOrders = billedIn(rangeFor("month", now));
+  const quarterOrders = billedIn(rangeFor("quarter", now));
+  const yearOrders = billedIn(rangeFor("year", now));
   const totalOrders = orders.filter((o) => o.status === "billed");
-  const todayRevenue = todayOrders.reduce((s, o) => s + o.total, 0);
+  const dayRevenue = dayOrders.reduce((s, o) => s + o.total, 0);
+  const weekRevenue = weekOrders.reduce((s, o) => s + o.total, 0);
   const monthRevenue = monthOrders.reduce((s, o) => s + o.total, 0);
-  const totalRevenue = totalOrders.reduce((s, o) => s + o.total, 0);
+  const quarterRevenue = quarterOrders.reduce((s, o) => s + o.total, 0);
+  const yearRevenue = yearOrders.reduce((s, o) => s + o.total, 0);
   const itemCounts: Record<string, { name: string; count: number; revenue: number }> = {};
   for (const order of totalOrders) {
     for (const item of order.items) {
@@ -48,24 +72,35 @@ export default function ReportsPage() {
 
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-  const monthlyOrders = useMemo(() => orders.filter((o) => {
-    const d = new Date(o.createdAt);
-    return d.getMonth() + 1 === Number(reportMonth) && d.getFullYear() === Number(reportYear);
-  }), [orders, reportMonth, reportYear]);
+  const periodRange = useMemo(() => {
+    if (reportPeriod === "day") return rangeFor("day", new Date(reportDate + "T00:00:00"));
+    if (reportPeriod === "week") return rangeFor("week", new Date(reportDate + "T00:00:00"));
+    if (reportPeriod === "month") return rangeFor("month", new Date(Number(reportYear), Number(reportMonth) - 1, 1));
+    if (reportPeriod === "quarter") return rangeFor("quarter", new Date(Number(reportYear), (Number(reportQuarter) - 1) * 3, 1));
+    return rangeFor("year", new Date(Number(reportYear), 0, 1));
+  }, [reportPeriod, reportDate, reportMonth, reportQuarter, reportYear]);
 
-  const monthlyBookings = useMemo(() => bookings.filter((b) => {
-    const d = new Date(b.date);
-    return d.getMonth() + 1 === Number(reportMonth) && d.getFullYear() === Number(reportYear);
-  }), [bookings, reportMonth, reportYear]);
+  const periodOrders = useMemo(() => orders.filter((o) => inRange(o.createdAt, periodRange.start, periodRange.end)), [orders, periodRange]);
+  const periodBookings = useMemo(() => bookings.filter((b) => inRange(b.date + "T00:00:00", periodRange.start, periodRange.end)), [bookings, periodRange]);
 
-  const monthlyBilledOrders = monthlyOrders.filter((o) => o.status === "billed");
-  const monthlyRevenue = monthlyBilledOrders.reduce((s, o) => s + o.total, 0);
+  const periodBilledOrders = periodOrders.filter((o) => o.status === "billed");
+  const periodRevenue = periodBilledOrders.reduce((s, o) => s + o.total, 0);
 
-  const printMonthlyReport = () => {
+  const periodName = { day: "Daily", week: "Weekly", month: "Monthly", quarter: "Quarterly", year: "Yearly" }[reportPeriod];
+  const periodLabel = () => {
+    if (reportPeriod === "day") return reportDate;
+    if (reportPeriod === "week") return `Week of ${periodRange.start.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+    if (reportPeriod === "month") return `${monthNames[Number(reportMonth) - 1]} ${reportYear}`;
+    if (reportPeriod === "quarter") return `Q${reportQuarter} ${reportYear}`;
+    return reportYear;
+  };
+
+  const printPeriodReport = () => {
     const now = new Date();
-    const monthLabel = `${monthNames[Number(reportMonth) - 1]} ${reportYear}`;
+    const label = periodLabel();
+    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     const itemsSold: Record<string, { qty: number; rev: number }> = {};
-    for (const order of monthlyOrders) {
+    for (const order of periodOrders) {
       for (const item of order.items) {
         if (!itemsSold[item.name]) itemsSold[item.name] = { qty: 0, rev: 0 };
         itemsSold[item.name].qty += item.quantity;
@@ -75,77 +110,106 @@ export default function ReportsPage() {
     const topItems = Object.entries(itemsSold).sort((a, b) => b[1].qty - a[1].qty).slice(0, 10);
     const lowStockItems = inventory.filter((i) => i.quantity <= i.minStock);
 
-    const rows = (cells: string[]) => `<tr>${cells.map((c) => `<td style="padding:4px 8px;border:1px solid #ccc;font-size:12px">${c}</td>`).join("")}</tr>`;
-    const ordersHtml = monthlyOrders.length === 0 ? "<p style='color:#888;font-size:13px'>No orders this month</p>" :
-      `<table style="width:100%;border-collapse:collapse;margin-top:8px">
-        <thead><tr style="background:#f3f4f6">${["#", "Customer", "Items", "Total", "Status", "Date"].map((h) => `<th style="padding:6px 8px;border:1px solid #ccc;font-size:12px;text-align:left">${h}</th>`).join("")}</tr></thead>
-        <tbody>${[...monthlyOrders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((o) => rows([
-          `#${o.orderNumber}`, o.customerName || "Walk-in", `${o.items.length} items`, `₹${o.total}`, o.status, new Date(o.createdAt).toLocaleDateString("en-IN"),
-        ])).join("")}</tbody>
+    const orderStatusBadge: Record<string, string> = {
+      billed: "badge-success", served: "badge-info", in_progress: "badge-warning", pending: "badge-neutral",
+    };
+    const rows = (cells: string[], badges: string[] = []) => `<tr>${cells.map((c, i) => `<td>${badges[i] ? `<span class="badge ${badges[i]}">${c}</span>` : c}</td>`).join("")}</tr>`;
+
+    const ordersHtml = periodOrders.length === 0 ? `<div class="empty-state">No orders in this period</div>` :
+      `<table>
+        <thead><tr>${["#", "Customer", "Items", "Total", "Status", "Date"].map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+        <tbody>${[...periodOrders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((o) => rows([
+          `#${o.orderNumber}`, esc(o.customerName || "Walk-in"), `${o.items.length} items`, `₹${o.total}`, o.status, new Date(o.createdAt).toLocaleDateString("en-IN"),
+        ], ["", "", "", "", orderStatusBadge[o.status] || "badge-neutral", ""])).join("")}</tbody>
       </table>`;
-    const bookingsHtml = monthlyBookings.length === 0 ? "<p style='color:#888;font-size:13px'>No bookings this month</p>" :
-      `<table style="width:100%;border-collapse:collapse;margin-top:8px">
-        <thead><tr style="background:#f3f4f6">${["Date", "Guest", "Table", "Party", "Status"].map((h) => `<th style="padding:6px 8px;border:1px solid #ccc;font-size:12px;text-align:left">${h}</th>`).join("")}</tr></thead>
-        <tbody>${monthlyBookings.map((b) => {
+    const topItemsHtml = topItems.length === 0 ? `<div class="empty-state">No items sold in this period</div>` :
+      `<table>
+        <thead><tr>${["#", "Item", "Qty Sold", "Revenue"].map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+        <tbody>${topItems.map(([name, data], i) => rows([String(i + 1), esc(name), String(data.qty), `₹${data.rev.toLocaleString("en-IN")}`])).join("")}</tbody>
+      </table>`;
+    const bookingsHtml = periodBookings.length === 0 ? `<div class="empty-state">No bookings in this period</div>` :
+      `<table>
+        <thead><tr>${["Date", "Guest", "Table", "Party", "Status"].map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+        <tbody>${periodBookings.map((b) => {
           const tbl = tables.find((t) => t.id === b.tableId);
-          return rows([b.date, b.guestName, tbl ? `Table ${tbl.number}` : "?", String(b.partySize), b.status]);
+          return rows([b.date, esc(b.guestName), tbl ? `Table ${tbl.number}` : "?", String(b.partySize), b.status]);
         }).join("")}</tbody>
       </table>`;
-    const inventoryHtml = inventory.length === 0 ? "<p style='color:#888;font-size:13px'>No inventory data</p>" :
-      `<table style="width:100%;border-collapse:collapse;margin-top:8px">
-        <thead><tr style="background:#f3f4f6">${["Item", "Category", "Quantity", "Min Stock", "Status"].map((h) => `<th style="padding:6px 8px;border:1px solid #ccc;font-size:12px;text-align:left">${h}</th>`).join("")}</tr></thead>
+    const inventoryHtml = inventory.length === 0 ? `<div class="empty-state">No inventory data</div>` :
+      `<table>
+        <thead><tr>${["Item", "Category", "Quantity", "Min Stock", "Status"].map((h) => `<th>${h}</th>`).join("")}</tr></thead>
         <tbody>${inventory.map((i) => rows([
-          i.name, i.category, `${i.quantity} ${i.unit}`, `${i.minStock} ${i.unit}`,
-          i.quantity <= i.minStock ? "<span style='color:#d97706'>Low Stock</span>" : "<span style='color:#16a34a'>OK</span>",
-        ])).join("")}</tbody>
+          esc(i.name), esc(i.category), `${i.quantity} ${i.unit}`, `${i.minStock} ${i.unit}`,
+          i.quantity <= i.minStock ? "Low Stock" : "OK",
+        ], ["", "", "", "", i.quantity <= i.minStock ? "badge-warning" : "badge-success"])).join("")}</tbody>
       </table>`;
-    const topItemsHtml = topItems.length === 0 ? "<p style='color:#888;font-size:13px'>No items sold this month</p>" :
-      `<table style="width:100%;border-collapse:collapse;margin-top:8px">
-        <thead><tr style="background:#f3f4f6">${["#", "Item", "Qty Sold", "Revenue"].map((h) => `<th style="padding:6px 8px;border:1px solid #ccc;font-size:12px;text-align:left">${h}</th>`).join("")}</tr></thead>
-        <tbody>${topItems.map(([name, data], i) => rows([String(i + 1), name, String(data.qty), `₹${data.rev.toLocaleString()}`])).join("")}</tbody>
+    const employeesHtml = employees.length === 0 ? `<div class="empty-state">No employees</div>` :
+      `<table>
+        <thead><tr>${["Name", "Role", "Shift", "Phone", "Status"].map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+        <tbody>${employees.map((e) => rows([
+          esc(e.name), esc(e.role), esc(e.shift), e.phone ? esc(e.phone) : "—", e.active ? "Active" : "Inactive",
+        ], ["", "", "", "", e.active ? "badge-success" : "badge-neutral"])).join("")}</tbody>
       </table>`;
-    const employeesHtml = employees.length === 0 ? "<p style='color:#888;font-size:13px'>No employees</p>" :
-      `<table style="width:100%;border-collapse:collapse;margin-top:8px">
-        <thead><tr style="background:#f3f4f6">${["Name", "Role", "Shift", "Phone", "Status"].map((h) => `<th style="padding:6px 8px;border:1px solid #ccc;font-size:12px;text-align:left">${h}</th>`).join("")}</tr></thead>
-        <tbody>${employees.map((e) => rows([e.name, e.role, e.shift, e.phone, e.active ? "Active" : "Inactive"])).join("")}</tbody>
-      </table>`;
+
+    const avg = periodBilledOrders.length > 0 ? Math.round(periodRevenue / periodBilledOrders.length) : 0;
 
     const win = window.open("", "_blank");
     if (!win) { toast.error("Popup blocked. Allow popups to print."); return; }
     win.document.write(`<!DOCTYPE html>
-<html><head><title>Monthly Report - ${monthLabel}</title>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${periodName} Report - ${esc(label)}</title>
 <style>
-  body { font-family: 'Courier New', monospace; padding: 20px; max-width: 1000px; margin: auto; color: #222; }
-  h1 { text-align: center; font-size: 20px; margin-bottom: 2px; }
-  .sub { text-align: center; font-size: 13px; color: #555; margin-bottom: 4px; }
-  h2 { font-size: 15px; margin: 20px 0 4px; border-bottom: 2px solid #333; padding-bottom: 4px; }
-  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0; }
-  .summary-item { flex: 1; min-width: 140px; background: #f9fafb; padding: 10px; border-radius: 6px; }
-  .summary-item .val { font-size: 20px; font-weight: bold; }
-  .summary-item .lbl { font-size: 11px; color: #666; }
-  .footer { text-align: center; margin-top: 30px; font-size: 13px; border-top: 2px solid #333; padding-top: 10px; }
-  @media print { @page { margin: 15mm 10mm; } body { padding: 0; } }
-</style></head><body>
-<h1>SURABHI HOTEL & FAMILY RESTAURANT</h1>
-<p class="sub">${settings.restaurantAddress || ""}${settings.restaurantAddress && settings.restaurantPhone ? " | " : ""}${settings.restaurantPhone ? `Phone: ${settings.restaurantPhone}` : ""}</p>
-<p class="sub" style="font-size:12px">GSTIN: ${settings.gstin || "29AABCS1429B1ZB"} | Report generated: ${now.toLocaleDateString("en-IN")} ${now.toLocaleTimeString("en-IN")}</p>
-<h1 style="font-size:18px;margin-top:8px">MONTHLY REPORT — ${monthLabel}</h1>
-<div class="summary">
-  <div class="summary-item"><div class="val">${monthlyOrders.length}</div><div class="lbl">Total Orders</div></div>
-  <div class="summary-item"><div class="val">${monthlyBilledOrders.length}</div><div class="lbl">Billed Orders</div></div>
-  <div class="summary-item"><div class="val">₹${monthlyRevenue.toLocaleString()}</div><div class="lbl">Total Revenue</div></div>
-  <div class="summary-item"><div class="val">${monthlyBilledOrders.length > 0 ? `₹${Math.round(monthlyRevenue / monthlyBilledOrders.length).toLocaleString()}` : "—"}</div><div class="lbl">Avg. Order Value</div></div>
-  <div class="summary-item"><div class="val">${monthlyBookings.length}</div><div class="lbl">Bookings</div></div>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1f2937; background-color: #ffffff; padding: 24px; font-size: 13px; line-height: 1.4; }
+  .report-header { border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 20px; }
+  .report-title { font-size: 20px; font-weight: 700; color: #111827; text-transform: uppercase; }
+  .company-name { font-size: 14px; font-weight: 600; color: #374151; margin-top: 2px; }
+  .meta-info { font-size: 12px; color: #6b7280; margin-top: 4px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+  .kpi-card { border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; background-color: #f9fafb; }
+  .kpi-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+  .kpi-value { font-size: 18px; font-weight: 700; color: #111827; margin-top: 4px; }
+  .section-block { margin-bottom: 24px; break-inside: avoid; page-break-inside: avoid; }
+  .section-title { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; border: 1px solid #d1d5db; }
+  th, td { padding: 8px 10px; border: 1px solid #d1d5db; }
+  th { background-color: #f3f4f6; font-weight: 600; color: #374151; border-bottom: 2px solid #9ca3af; }
+  tr:nth-child(even) { background-color: #f9fafb; }
+  tr { break-inside: avoid; page-break-inside: avoid; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 500; }
+  .badge-success { background-color: #def7ec; color: #03543f; border: 1px solid #bcf0da; }
+  .badge-warning { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+  .badge-info { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+  .badge-neutral { background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+  .empty-state { padding: 12px; border: 1px dashed #d1d5db; border-radius: 6px; color: #6b7280; font-style: italic; }
+  @media print { body { padding: 0; } .section-block { break-inside: avoid; page-break-inside: avoid; } thead { display: table-header-group; } }
+</style>
+</head>
+<body>
+<header class="report-header">
+  <h1 class="report-title">${periodName} Report - ${esc(label)}</h1>
+  <div class="company-name">SURABHI HOTEL &amp; FAMILY RESTAURANT</div>
+  <div class="meta-info">
+    ${esc(settings.restaurantAddress || "")}${settings.restaurantAddress ? " &bull; " : ""}Phone: ${esc(settings.restaurantPhone || "9902718290")} &bull; GSTIN: ${esc(settings.gstin || "29AABCS1429B1ZB")}<br>
+    Report Generated: ${now.toLocaleDateString("en-IN")}, ${now.toLocaleTimeString("en-IN")}
+  </div>
+</header>
+<div class="kpi-grid">
+  <div class="kpi-card"><div class="kpi-title">Total Orders</div><div class="kpi-value">${periodOrders.length}</div></div>
+  <div class="kpi-card"><div class="kpi-title">Billed Orders</div><div class="kpi-value">${periodBilledOrders.length}</div></div>
+  <div class="kpi-card"><div class="kpi-title">Bookings</div><div class="kpi-value">${periodBookings.length}</div></div>
+  <div class="kpi-card"><div class="kpi-title">Total Revenue</div><div class="kpi-value">₹${periodRevenue.toLocaleString("en-IN")}</div></div>
+  <div class="kpi-card"><div class="kpi-title">Avg. Order Value</div><div class="kpi-value">${periodBilledOrders.length > 0 ? `₹${avg.toLocaleString("en-IN")}` : "—"}</div></div>
 </div>
-<h2>📋 ALL ORDERS (${monthlyOrders.length})</h2>${ordersHtml}
-<h2>🥇 TOP SELLING ITEMS (${monthLabel})</h2>${topItemsHtml}
-<h2>📅 BOOKINGS (${monthlyBookings.length})</h2>${bookingsHtml}
-<h2>📦 INVENTORY STATUS (${inventory.length} items${lowStockItems.length > 0 ? `, ${lowStockItems.length} low stock` : ""})</h2>${inventoryHtml}
-<h2>👥 EMPLOYEES (${employees.length})</h2>${employeesHtml}
-<h2>📊 TABLES (${tables.length})</h2>
-<p style="font-size:13px">${tables.filter((t) => t.status === "available").length} Available | ${tables.filter((t) => t.status === "occupied").length} Occupied | ${tables.filter((t) => t.status === "reserved").length} Reserved</p>
-<div class="footer">Generated by Surabhi Restaurant Management System • ${now.toLocaleDateString("en-IN")}</div>
-</body></html>`);
+<section class="section-block"><h2 class="section-title">📦 ALL ORDERS (${periodOrders.length})</h2>${ordersHtml}</section>
+<section class="section-block"><h2 class="section-title">🔥 TOP SELLING ITEMS (${esc(label)})</h2>${topItemsHtml}</section>
+<section class="section-block"><h2 class="section-title">📅 BOOKINGS (${periodBookings.length})</h2>${bookingsHtml}</section>
+<section class="section-block"><h2 class="section-title">📦 INVENTORY STATUS (${inventory.length} items${lowStockItems.length > 0 ? `, ${lowStockItems.length} low stock` : ""})</h2>${inventoryHtml}</section>
+<section class="section-block"><h2 class="section-title">👥 EMPLOYEES (${employees.length})</h2>${employeesHtml}</section>
+</body>
+</html>`);
     win.document.close();
     win.focus();
     setTimeout(() => { win.print(); }, 500);
@@ -164,11 +228,13 @@ export default function ReportsPage() {
       <h1 className="text-2xl font-bold">{t("nav.reports")}</h1>
       <div>
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2"><BarChart3 className="w-4 h-4" /> {t("label.sales_summary")}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           {[
-            { label: t("label.today_revenue"), value: `₹${todayRevenue.toLocaleString()}`, sub: `${todayOrders.length} ${t("nav.orders").toLowerCase()}` },
+            { label: t("label.today_revenue"), value: `₹${dayRevenue.toLocaleString()}`, sub: `${dayOrders.length} ${t("nav.orders").toLowerCase()}` },
+            { label: t("label.this_week"), value: `₹${weekRevenue.toLocaleString()}`, sub: `${weekOrders.length} ${t("nav.orders").toLowerCase()}` },
             { label: t("label.this_month"), value: `₹${monthRevenue.toLocaleString()}`, sub: `${monthOrders.length} ${t("nav.orders").toLowerCase()}` },
-            { label: t("label.all_time_revenue"), value: `₹${totalRevenue.toLocaleString()}`, sub: `${totalOrders.length} ${t("nav.orders").toLowerCase()}` },
+            { label: t("label.this_quarter"), value: `₹${quarterRevenue.toLocaleString()}`, sub: `${quarterOrders.length} ${t("nav.orders").toLowerCase()}` },
+            { label: t("label.this_year"), value: `₹${yearRevenue.toLocaleString()}`, sub: `${yearOrders.length} ${t("nav.orders").toLowerCase()}` },
           ].map(({ label, value, sub }) => (
             <Card key={label} className="shadow-sm"><CardContent className="pt-4 pb-4"><p className="text-sm text-muted-foreground">{label}</p><p className="text-2xl font-bold mt-1">{value}</p><p className="text-xs text-muted-foreground mt-1">{sub}</p></CardContent></Card>
           ))}
@@ -193,22 +259,52 @@ export default function ReportsPage() {
         </Card>
       )}
       <Card className="shadow-sm">
-        <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Printer className="w-4 h-4" /> Monthly Report</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Printer className="w-4 h-4" /> {t("label.period_report")}</CardTitle></CardHeader>
         <CardContent className="pt-0 space-y-3">
-          <p className="text-sm text-muted-foreground">Print a comprehensive A–Z report for any month including all orders, bookings, inventory, menu items, employees, and revenue.</p>
-          <div className="flex gap-3 items-end">
+          <p className="text-sm text-muted-foreground">{t("label.period_report_desc")}</p>
+          <div className="flex gap-3 items-end flex-wrap">
             <div className="space-y-1">
-              <Label>Month</Label>
-              <Select value={reportMonth} onValueChange={setReportMonth}>
+              <Label>{t("label.period")}</Label>
+              <Select value={reportPeriod} onValueChange={(v) => setReportPeriod(v as "day" | "week" | "month" | "quarter" | "year")}>
                 <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                <SelectContent>{monthNames.map((m, i) => <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  <SelectItem value="day">{t("label.day")}</SelectItem>
+                  <SelectItem value="week">{t("label.week")}</SelectItem>
+                  <SelectItem value="month">{t("label.month")}</SelectItem>
+                  <SelectItem value="quarter">{t("label.quarter")}</SelectItem>
+                  <SelectItem value="year">{t("label.year")}</SelectItem>
+                </SelectContent>
               </Select>
             </div>
+            {(reportPeriod === "day" || reportPeriod === "week") && (
+              <div className="space-y-1">
+                <Label>{t("label.date")}</Label>
+                <Input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-40" />
+              </div>
+            )}
+            {(reportPeriod === "month" || reportPeriod === "quarter") && (
+              <div className="space-y-1">
+                <Label>{t("label.month")}</Label>
+                <Select value={reportMonth} onValueChange={setReportMonth}>
+                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                  <SelectContent>{monthNames.map((m, i) => <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+            {reportPeriod === "quarter" && (
+              <div className="space-y-1">
+                <Label>{t("label.quarter")}</Label>
+                <Select value={reportQuarter} onValueChange={setReportQuarter}>
+                  <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                  <SelectContent>{["1", "2", "3", "4"].map((q) => <SelectItem key={q} value={q}>Q{q}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1">
-              <Label>Year</Label>
+              <Label>{t("label.year")}</Label>
               <Input type="number" min={2024} max={2030} value={reportYear} onChange={(e) => setReportYear(e.target.value)} className="w-24" />
             </div>
-            <Button onClick={printMonthlyReport} className="cursor-pointer"><Printer className="w-4 h-4 mr-2" /> Generate & Print</Button>
+            <Button onClick={printPeriodReport} className="cursor-pointer"><Printer className="w-4 h-4 mr-2" /> {t("btn.generate_print")}</Button>
           </div>
         </CardContent>
       </Card>

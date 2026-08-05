@@ -173,8 +173,14 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
 
   const orderCounter = Math.max(0, ...orders.map((o) => o.orderNumber)) + 1;
 
+  const stripUndefined = (data: Record<string, unknown>): Record<string, unknown> => {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(data)) if (v !== undefined) out[k] = v;
+    return out;
+  };
+
   const write = useCallback(async (col: string, id: string, data: Record<string, unknown>) => {
-    try { await setDoc(doc(db, col, id), data, { merge: true }); } catch (e) {
+    try { await setDoc(doc(db, col, id), stripUndefined(data), { merge: true }); } catch (e) {
       console.error(`Firestore write error (${col}/${id}):`, e);
       toast.error(`Failed to save: ${(e as Error).message}`);
     }

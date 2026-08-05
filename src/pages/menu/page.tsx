@@ -30,7 +30,7 @@ export default function MenuPage() {
   const [newCatNameKn, setNewCatNameKn] = useState("");
 
   const filtered = items.filter((item) => {
-    const matchSearch = item.name.toLowerCase().includes(search.toLowerCase()) || item.nameKn.includes(search);
+    const matchSearch = (item.name || "").toLowerCase().includes(search.toLowerCase()) || (item.nameKn || "").includes(search);
     const matchCat = selectedCategory === "all" || item.categoryId === selectedCategory;
     return matchSearch && matchCat;
   });
@@ -43,9 +43,8 @@ export default function MenuPage() {
 
   const handleSave = () => {
     if (!form.name || !form.categoryId || form.price <= 0) { toast.error(t("msg.fill_name_category_price")); return; }
-    const data = form.subCategory ? form : { ...form, subCategory: undefined };
-    if (editingId) updateMenuItem(editingId, data);
-    else addMenuItem(data);
+    if (editingId) updateMenuItem(editingId, form);
+    else addMenuItem(form);
     toast.success(t("msg.saved")); setDialogOpen(false);
   };
 
