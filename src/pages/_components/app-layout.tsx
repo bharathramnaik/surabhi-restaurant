@@ -7,6 +7,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Outlet, useLocation, useParams } from "react-router-dom";
+import LocaleSwitcher from "@/components/ui/locale-switcher.tsx";
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "3.0";
 
@@ -29,7 +30,7 @@ function WhaleLogo({ size = 40 }: { size?: number }) {
 export { WhaleLogo };
 
 export default function AppLayout() {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(["common", "dashboard"]);
   const { lng } = useParams<{ lng: string }>();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -104,16 +105,19 @@ export default function AppLayout() {
         </div>
       )}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="border-b border-sky-200/50 dark:border-sky-400/30 flex items-center justify-between px-4 bg-sky-200/80 dark:bg-sky-400/20 backdrop-blur-sm flex-shrink-0">
-          <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-accent cursor-pointer">
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="md:hidden flex items-center gap-2">
-            <WhaleLogo size={28} />
-            <span className="font-semibold text-sm">Surabhi Restaurant</span>
+        <header className="flex items-center justify-between px-4 pt-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-accent cursor-pointer">
+              <Menu className="w-5 h-5" />
+            </button>
+            {!isOnline && <span className="hidden md:flex text-xs text-destructive items-center gap-1"><WifiOff className="w-3 h-3" /> Offline</span>}
           </div>
-          <div className="hidden md:flex items-center gap-2">
-            {!isOnline && <span className="text-xs text-destructive flex items-center gap-1"><WifiOff className="w-3 h-3" /> Offline</span>}
+          <div className="flex flex-col items-center text-center min-w-0 px-2">
+            <h1 className="font-bold text-sm sm:text-base truncate">{t("welcome", { ns: "dashboard" })}</h1>
+            <p className="text-xs text-muted-foreground truncate">{new Date().toLocaleDateString(lng === "kn" ? "kn-IN" : "en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <LocaleSwitcher />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto"><Outlet /></main>

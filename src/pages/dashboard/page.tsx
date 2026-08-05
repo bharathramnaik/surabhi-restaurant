@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils.ts";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
-import LocaleSwitcher from "@/components/ui/locale-switcher.tsx";
 
 export default function Dashboard() {
   const { t } = useTranslation(["dashboard", "common"]);
@@ -38,13 +37,6 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20 md:pb-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("welcome")}</h1>
-          <p className="text-muted-foreground text-sm mt-1">{new Date().toLocaleDateString(lng === "kn" ? "kn-IN" : "en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
-        </div>
-        <LocaleSwitcher />
-      </div>
       {lowStockItems.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
