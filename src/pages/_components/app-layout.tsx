@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Outlet, useLocation, useParams } from "react-router-dom";
 import LocaleSwitcher from "@/components/ui/locale-switcher.tsx";
+import AppUpdateDialog from "@/components/ui/app-update-dialog.tsx";
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "3.0";
 
@@ -139,6 +140,7 @@ export default function AppLayout() {
           ))}
         </div>
       </nav>
+      <AppUpdateDialog />
     </div>
   );
 }

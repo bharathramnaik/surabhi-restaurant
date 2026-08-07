@@ -146,5 +146,9 @@
   "msg.add_item_error": "Add at least one item",
   "msg.no_salary_records": "No salary records",
   "msg.admin_access_required": "Admin Access Required",
-  "msg.enter_pin": "Enter admin PIN to view and manage employees"
+  "msg.enter_pin": "Enter admin PIN to view and manage employees",
+  "update.title": "Update available",
+  "update.description": "A new version (v{{version}}) is available with bug fixes and improvements. Update the app to get the latest features.",
+  "update.button": "Update",
+  "btn.later": "Later"
 }
