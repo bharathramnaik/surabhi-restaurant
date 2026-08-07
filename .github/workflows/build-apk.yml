@@ -68,6 +68,20 @@ jobs:
         run: |
           mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/surabhi-hotel-v${{ steps.version.outputs.value }}.apk
 
+      - name: Prepare public files
+        run: |
+          mkdir -p public-apk
+          cp android/app/build/outputs/apk/debug/*.apk public-apk/
+          node -e "const v=require('./package.json').version; require('fs').writeFileSync('public-apk/version.json', JSON.stringify({version:v, apk:'surabhi-hotel-v'+v+'.apk'}))"
+
+      - name: Deploy APK to GitHub Pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: public-apk
+          keep_history: false
+          force_orphan: true
+
       - uses: actions/upload-artifact@v4
         with:
           name: surabhi-hotel-v${{ steps.version.outputs.value }}-${{ github.run_number }}
