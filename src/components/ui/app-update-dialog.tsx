@@ -15,18 +15,22 @@ export default function AppUpdateDialog() {
   useEffect(() => {
     let cancelled = false;
 
-    const check = async () => {
+    const check = async (force = false) => {
       try {
-        const lastCheck = Number(localStorage.getItem("updateLastCheck") ?? 0);
-        if (Date.now() - lastCheck < CHECK_INTERVAL_MS) return;
+        if (!force) {
+          const lastCheck = Number(localStorage.getItem("updateLastCheck") ?? 0);
+          if (Date.now() - lastCheck < CHECK_INTERVAL_MS) return;
+        }
         localStorage.setItem("updateLastCheck", String(Date.now()));
 
         const release = await fetchLatestRelease();
         if (cancelled || !release) return;
         if (!isNewerVersion(release.latestVersion, currentAppVersion())) return;
 
-        const snoozed = Number(localStorage.getItem("updateSnooze") ?? 0);
-        if (Date.now() - snoozed < SNOOZE_MS) return;
+        if (!force) {
+          const snoozed = Number(localStorage.getItem("updateSnooze") ?? 0);
+          if (Date.now() - snoozed < SNOOZE_MS) return;
+        }
         setInfo(release);
       } catch {
         /* silent */
@@ -37,10 +41,15 @@ export default function AppUpdateDialog() {
     const onVisible = () => {
       if (document.visibilityState === "visible") check();
     };
+    const onManualCheck = () => {
+      check(true);
+    };
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("check-for-update", onManualCheck);
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("check-for-update", onManualCheck);
     };
   }, []);
 

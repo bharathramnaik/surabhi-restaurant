@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils.ts";
 import { useEffect } from "react";
 import {
   BarChart3, BookOpen, ClipboardList, LayoutDashboard,
-  Menu, Package, Users, UtensilsCrossed, X, Wifi, WifiOff,
+  Menu, Package, RefreshCw, Users, UtensilsCrossed, X, Wifi, WifiOff,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -83,6 +83,14 @@ export default function AppLayout() {
       <div className="p-3 border-t border-sidebar-border">
         <div className="flex items-center justify-between text-xs text-sidebar-foreground/40">
           <span>v{APP_VERSION} © 2025–{new Date().getFullYear()} Surabhi</span>
+          <button
+            onClick={() => window.dispatchEvent(new Event("check-for-update"))}
+            className="flex items-center gap-1 p-1 rounded hover:bg-sidebar-accent hover:text-sidebar-foreground/80 cursor-pointer"
+            title="Check for update"
+            aria-label="Check for update"
+          >
+            <RefreshCw className="w-3 h-3" />
+          </button>
           {isOnline ? <Wifi className="w-3 h-3 text-green-400" /> : <WifiOff className="w-3 h-3 text-red-400" />}
         </div>
       </div>
