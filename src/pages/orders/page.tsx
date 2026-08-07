@@ -143,6 +143,9 @@ export default function OrdersPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState<OrderFormItem[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [pinOpen, setPinOpen] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const sortedOrders = useMemo(() => [...orders].filter((o) => {
     const matchSearch = o.customerName.toLowerCase().includes(search.toLowerCase()) || String(o.orderNumber).includes(search);
@@ -218,6 +221,22 @@ export default function OrdersPage() {
     if (status === "billed") { const order = orders.find((o) => o.id === id); if (order?.tableId) updateTable(order.tableId, { status: "available" }); }
   };
 
+  const requestDelete = (orderId: string) => {
+    setPendingDeleteId(orderId);
+    setPinOpen(true);
+  };
+
+  const verifyDeletePin = () => {
+    if (pinInput === (settings.adminPin ?? "1234")) {
+      setPinOpen(false);
+      setPinInput("");
+      if (pendingDeleteId) { setDeleteConfirmId(pendingDeleteId); setPendingDeleteId(null); }
+    } else {
+      toast.error(t("msg.invalid_pin"));
+      setPinInput("");
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 pb-20 md:pb-6 space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
@@ -252,7 +271,7 @@ export default function OrdersPage() {
                     <>
                       <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handlePrintOrder(order)}><Printer className="w-3 h-3 mr-1" /> {t("btn.print")}</Button>
                       <Button size="sm" variant="secondary" className="cursor-pointer text-xs h-6" onClick={() => handleWhatsAppOrder(order)}><Share2 className="w-3 h-3 mr-1" /> {t("btn.whatsapp")}</Button>
-                      <Button size="sm" variant="destructive" className="cursor-pointer text-xs h-6" onClick={() => setDeleteConfirmId(order.id)}><Trash2 className="w-3 h-3 mr-1" /> {t("btn.delete")}</Button>
+                      <Button size="sm" variant="destructive" className="cursor-pointer text-xs h-6" onClick={() => requestDelete(order.id)}><Trash2 className="w-3 h-3 mr-1" /> {t("btn.delete")}</Button>
                     </>
                   )}
                 </div>
@@ -358,6 +377,19 @@ export default function OrdersPage() {
         onConfirm={() => { if (deleteConfirmId) deleteOrder(deleteConfirmId); setDeleteConfirmId(null); }}
         title={t("msg.delete_billed_order")}
       />
+      <Dialog open={pinOpen} onOpenChange={(o) => { if (!o) { setPinOpen(false); setPendingDeleteId(null); setPinInput(""); } }}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader><DialogTitle>{t("msg.admin_access_required")}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">{t("msg.enter_pin")}</p>
+            <Input type="password" value={pinInput} onChange={(e) => setPinInput(e.target.value)} placeholder={t("label.pin")} maxLength={6} onKeyDown={(e) => { if (e.key === "Enter") verifyDeletePin(); }} className="text-center text-lg" autoFocus />
+            <div className="flex gap-2 justify-end">
+              <Button variant="secondary" onClick={() => { setPinOpen(false); setPendingDeleteId(null); setPinInput(""); }} className="cursor-pointer">{t("btn.cancel")}</Button>
+              <Button onClick={verifyDeletePin} className="cursor-pointer">{t("btn.confirm")}</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       {Preview}
     </div>
   );

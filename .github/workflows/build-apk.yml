@@ -64,16 +64,20 @@ jobs:
         id: version
         run: echo "value=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
+      - name: Rename APK
+        run: |
+          mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/surabhi-hotel-v${{ steps.version.outputs.value }}.apk
+
       - uses: actions/upload-artifact@v4
         with:
-          name: surabhi-restaurant-v${{ steps.version.outputs.value }}-${{ github.run_number }}
+          name: surabhi-hotel-v${{ steps.version.outputs.value }}-${{ github.run_number }}
           path: android/app/build/outputs/apk/debug/*.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.value }}
-          name: Surabhi Restaurant v${{ steps.version.outputs.value }}
+          name: Surabhi Hotel v${{ steps.version.outputs.value }}
           body: |
             Automated APK build from commit ${{ github.sha }}.
 
