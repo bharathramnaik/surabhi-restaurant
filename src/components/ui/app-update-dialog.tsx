@@ -65,6 +65,16 @@ export default function AppUpdateDialog() {
         </DialogHeader>
         <div className="text-sm text-muted-foreground space-y-2">
           <p>{t("update.description", { version: info?.latestVersion ?? "" })}</p>
+          {info ? (
+            <a
+              href={info.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-primary underline break-all block"
+            >
+              {info.url}
+            </a>
+          ) : null}
         </div>
         <div className="flex gap-2 justify-end pt-3">
           <Button variant="secondary" onClick={close} className="cursor-pointer">{t("btn.later")}</Button>
