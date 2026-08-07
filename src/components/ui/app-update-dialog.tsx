@@ -50,7 +50,7 @@ export default function AppUpdateDialog() {
   };
 
   const update = () => {
-    if (info) window.open(info.url, "_blank");
+    if (info) window.location.href = info.url;
     close();
   };
 
