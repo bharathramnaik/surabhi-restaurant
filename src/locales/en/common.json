@@ -149,6 +149,7 @@
   "msg.enter_pin": "Enter admin PIN to view and manage employees",
   "update.title": "Update available",
   "update.description": "A new version (v{{version}}) is available with bug fixes and improvements. Update the app to get the latest features.",
+  "update.current": "Your version: v{{version}}",
   "update.button": "Update",
   "btn.later": "Later"
 }

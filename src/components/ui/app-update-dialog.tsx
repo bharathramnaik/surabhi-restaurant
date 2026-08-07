@@ -67,6 +67,7 @@ export default function AppUpdateDialog() {
         </DialogHeader>
         <div className="text-sm text-muted-foreground space-y-2">
           <p>{t("update.description", { version: info?.latestVersion ?? "" })}</p>
+          <p className="text-xs font-medium">{t("update.current", { version: currentAppVersion() })}</p>
           {info ? (
             <a
               href={info.url}
