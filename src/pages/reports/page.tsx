@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useData } from "@/lib/data-context.tsx";
+import { usePrintPreview } from "@/components/ui/print-preview.tsx";
 import { BarChart3, Download, Settings, Printer } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,6 +13,7 @@ import { toast } from "sonner";
 export default function ReportsPage() {
   const { t } = useTranslation("common");
   const { orders, tables, employees, menuItems, menuCategories, inventory, bookings, settings, updateSetting } = useData();
+  const { Preview, setPreview: openPrintPreview } = usePrintPreview();
   const [gstinInput, setGstinInput] = useState(settings.gstin ?? "29AABCS1429B1ZB");
   const [addressInput, setAddressInput] = useState(settings.restaurantAddress ?? "");
   const [phoneInput, setPhoneInput] = useState(settings.restaurantPhone ?? "");
@@ -153,9 +155,7 @@ export default function ReportsPage() {
 
     const avg = periodBilledOrders.length > 0 ? Math.round(periodRevenue / periodBilledOrders.length) : 0;
 
-    const win = window.open("", "_blank");
-    if (!win) { toast.error("Popup blocked. Allow popups to print."); return; }
-    win.document.write(`<!DOCTYPE html>
+    const reportHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -209,10 +209,8 @@ export default function ReportsPage() {
 <section class="section-block"><h2 class="section-title">📦 INVENTORY STATUS (${inventory.length} items${lowStockItems.length > 0 ? `, ${lowStockItems.length} low stock` : ""})</h2>${inventoryHtml}</section>
 <section class="section-block"><h2 class="section-title">👥 EMPLOYEES (${employees.length})</h2>${employeesHtml}</section>
 </body>
-</html>`);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); }, 500);
+</html>`;
+    openPrintPreview(`${periodName} Report - ${label}`, reportHtml);
   };
 
   const saveSettings = () => {
@@ -327,6 +325,7 @@ export default function ReportsPage() {
           <Button onClick={saveSettings} className="cursor-pointer">{t("btn.save")} {t("btn.settings")}</Button>
         </CardContent>
       </Card>
+      {Preview}
     </div>
   );
 }

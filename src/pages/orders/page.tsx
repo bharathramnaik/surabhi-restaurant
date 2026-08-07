@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ConfirmDialog from "@/components/ui/confirm-dialog.tsx";
+import { usePrintPreview } from "@/components/ui/print-preview.tsx";
 import { useData } from "@/lib/data-context.tsx";
 import { cn } from "@/lib/utils.ts";
 import { Plus, Pencil, Trash2, Search, ShoppingCart, Receipt, X, Printer, Share2 } from "lucide-react";
@@ -129,8 +130,10 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 
 }
 
 export default function OrdersPage() {
-  const { t } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
+  const isKn = i18n.language === "kn";
   const { orders, tables, menuItems, menuCategories, settings, addOrder, updateOrder, deleteOrder, updateTable } = useData();
+  const { Preview, setPreview: openPrintPreview } = usePrintPreview();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -196,14 +199,11 @@ export default function OrdersPage() {
   };
 
   const handlePrintOrder = (order: typeof orders[0]) => {
-    const invoiceHtml = formatInvoiceHtml(order, settings);
-    const win = window.open("", "_blank");
-    if (!win) { toast.error(t("msg.popup_blocked")); return; }
-    win.document.write(invoiceHtml);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 300);
+    openPrintPreview(`Invoice #${order.orderNumber}`, formatInvoiceHtml(order, settings));
   };
+
+  const activeCategory = selectedCategory ? menuCategories.find((c) => c.id === selectedCategory) : null;
+  const activeCategoryName = activeCategory ? (isKn ? (activeCategory.nameKn || activeCategory.name) : activeCategory.name) : null;
 
   const handleWhatsAppOrder = (order: typeof orders[0]) => {
     const invoiceText = "```\n" + formatInvoiceText(order, settings) + "\n```";
@@ -300,7 +300,7 @@ export default function OrdersPage() {
         <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between gap-2">
-              <span>{selectedCategory ? menuCategories.find((c) => c.id === selectedCategory)?.name || t("btn.add_item") : t("btn.add_item")}</span>
+              <span>{activeCategoryName || t("btn.add_item")}</span>
               {pendingItems.length > 0 && <span className="text-xs font-normal text-muted-foreground">{pendingItems.reduce((s, i) => s + i.quantity, 0)} {t("label.items")}</span>}
             </DialogTitle>
           </DialogHeader>
@@ -312,8 +312,8 @@ export default function OrdersPage() {
                 return (
                   <button key={cat.id} onClick={() => setSelectedCategory(cat.id)}
                     className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 hover:border-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-colors cursor-pointer">
-                    <span className="font-medium text-sm text-center">{cat.name}</span>
-                    <span className="text-xs text-gray-400 mt-1">{count} items</span>
+                    <span className="font-medium text-sm text-center">{isKn ? (cat.nameKn || cat.name) : cat.name}</span>
+                    <span className="text-xs text-gray-400 mt-1">{count} {t("label.items")}</span>
                   </button>
                 );
               })}
@@ -328,7 +328,7 @@ export default function OrdersPage() {
                 return (
                   <div key={m.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-gray-300">
                     <div>
-                      <div className="font-medium text-sm">{m.name}</div>
+                      <div className="font-medium text-sm">{isKn ? (m.nameKn || m.name) : m.name}</div>
                       <div className="text-xs text-gray-500">₹{m.price}</div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -358,6 +358,7 @@ export default function OrdersPage() {
         onConfirm={() => { if (deleteConfirmId) deleteOrder(deleteConfirmId); setDeleteConfirmId(null); }}
         title={t("msg.delete_billed_order")}
       />
+      {Preview}
     </div>
   );
 }
